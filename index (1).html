@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>APS Portal Brokeri</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}
+:root{--navy:#0C2340;--navy2:#1a3a5c;--red:#C0392B;--yellow:#F39C12;--bg:#f4f6f9;--white:#fff;--border:#e2e8f0;--text:#1a202c;--muted:#718096}
+body{background:var(--bg);color:var(--text);min-height:100vh}
+
+/* LOGIN */
+#login-screen{display:flex;align-items:center;justify-content:center;min-height:100vh;background:var(--navy)}
+.login-card{background:var(--white);border-radius:12px;padding:40px;width:380px;box-shadow:0 20px 60px rgba(0,0,0,0.3)}
+.login-logo{text-align:center;margin-bottom:28px}
+.login-logo h1{font-size:24px;font-weight:700;color:var(--navy)}
+.login-logo p{font-size:13px;color:var(--muted);margin-top:4px}
+.login-logo .aps{color:var(--red)}
+.form-group{margin-bottom:14px}
+.form-group label{display:block;font-size:12px;font-weight:600;color:var(--muted);margin-bottom:5px;text-transform:uppercase;letter-spacing:0.5px}
+.form-group input{width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-size:14px;color:var(--text);outline:none;transition:border 0.2s}
+.form-group input:focus{border-color:var(--navy)}
+.btn-login{width:100%;background:var(--navy);color:var(--white);border:none;padding:12px;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;margin-top:6px}
+.btn-login:hover{background:var(--navy2)}
+.login-error{color:var(--red);font-size:12px;text-align:center;margin-top:8px;display:none}
+.login-accent{width:40px;height:4px;background:var(--yellow);border-radius:2px;margin:0 auto 16px}
+
+/* APP */
+#app-screen{display:none;flex-direction:row;min-height:100vh}
+
+/* SIDEBAR */
+.sidebar{width:220px;background:var(--navy);flex-shrink:0;display:flex;flex-direction:column;min-height:100vh}
+.sb-logo{padding:20px 16px 16px;border-bottom:1px solid rgba(255,255,255,0.08)}
+.sb-logo-title{color:#fff;font-size:16px;font-weight:700}
+.sb-logo-title span{color:var(--yellow)}
+.sb-logo-sub{color:rgba(255,255,255,0.4);font-size:11px;margin-top:2px}
+.sb-user{padding:12px 16px;border-bottom:1px solid rgba(255,255,255,0.08);display:flex;align-items:center;gap:8px}
+.sb-user-av{width:30px;height:30px;border-radius:50%;background:var(--yellow);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:var(--navy);flex-shrink:0}
+.sb-user-info{min-width:0}
+.sb-user-name{color:#fff;font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sb-user-role{color:rgba(255,255,255,0.4);font-size:10px}
+.sb-section{padding:8px 0}
+.sb-label{color:rgba(255,255,255,0.3);font-size:10px;font-weight:600;letter-spacing:1px;padding:6px 16px 3px;text-transform:uppercase}
+.sb-item{display:flex;align-items:center;gap:9px;padding:9px 16px;cursor:pointer;color:rgba(255,255,255,0.6);font-size:13px;border-left:2px solid transparent;transition:all 0.15s;text-decoration:none}
+.sb-item:hover{background:rgba(255,255,255,0.07);color:#fff}
+.sb-item.active{background:rgba(255,255,255,0.1);color:#fff;border-left-color:var(--yellow)}
+.sb-dept-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.sb-bottom{margin-top:auto;padding:12px 0;border-top:1px solid rgba(255,255,255,0.08)}
+.btn-logout{display:flex;align-items:center;gap:8px;padding:9px 16px;cursor:pointer;color:rgba(255,255,255,0.5);font-size:12px;background:none;border:none;width:100%;text-align:left}
+.btn-logout:hover{color:#fff}
+
+/* MAIN */
+.main{flex:1;display:flex;flex-direction:column;min-width:0;overflow-x:hidden}
+.topbar{background:var(--white);border-bottom:1px solid var(--border);padding:12px 24px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.topbar-title{font-size:15px;font-weight:700;color:var(--navy)}
+.topbar-date{font-size:12px;color:var(--muted)}
+.content{flex:1;padding:20px 24px;overflow-y:auto}
+.page{display:none}
+.page.active{display:block}
+
+/* STATS */
+.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px}
+.stat-card{background:var(--white);border:1px solid var(--border);border-radius:10px;padding:14px 16px}
+.stat-label{font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px}
+.stat-val{font-size:26px;font-weight:700;color:var(--navy)}
+.stat-val.green{color:#27ae60}
+.stat-val.red{color:var(--red)}
+.stat-val.yellow{color:var(--yellow)}
+
+/* HOME DEPT CARDS */
+.dept-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.dept-card{background:var(--white);border:1px solid var(--border);border-radius:12px;padding:20px;cursor:pointer;transition:all 0.15s;border-top:3px solid transparent}
+.dept-card:hover{border-color:var(--navy);transform:translateY(-2px)}
+.dept-card-icon{width:44px;height:44px;border-radius:10px;display:flex;align-items:center;justify-content:center;margin-bottom:12px;font-size:22px}
+.dept-card h3{font-size:15px;font-weight:700;margin-bottom:4px;color:var(--navy)}
+.dept-card p{font-size:12px;color:var(--muted)}
+.dept-card .cnt{font-size:28px;font-weight:700;margin-top:10px}
+
+/* FILTERS */
+.filters-bar{background:var(--white);border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin-bottom:16px;display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end}
+.filter-group{display:flex;flex-direction:column;gap:3px}
+.filter-group label{font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px}
+.filter-group select,.filter-group input{padding:6px 10px;border:1px solid var(--border);border-radius:7px;font-size:12px;color:var(--text);background:var(--white);min-width:110px;outline:none}
+.filter-group select:focus,.filter-group input:focus{border-color:var(--navy)}
+.btn-filter-reset{padding:6px 12px;background:transparent;border:1px solid var(--border);border-radius:7px;font-size:12px;cursor:pointer;color:var(--muted);align-self:flex-end}
+.btn-filter-reset:hover{background:var(--bg)}
+
+/* TABLE */
+.tbl-wrap{background:var(--white);border:1px solid var(--border);border-radius:10px;overflow:hidden}
+.tbl-head{padding:12px 16px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border)}
+.tbl-head-title{font-size:13px;font-weight:700;color:var(--navy)}
+.tbl-actions{display:flex;gap:8px}
+.btn-primary{background:var(--navy);color:#fff;border:none;padding:8px 14px;border-radius:7px;font-size:12px;cursor:pointer;display:flex;align-items:center;gap:6px;font-weight:600}
+.btn-primary:hover{background:var(--navy2)}
+.btn-import{background:var(--yellow);color:var(--navy);border:none;padding:8px 14px;border-radius:7px;font-size:12px;cursor:pointer;display:flex;align-items:center;gap:6px;font-weight:700}
+.btn-import:hover{opacity:0.9}
+.tbl-scroll{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{text-align:left;padding:9px 12px;color:var(--muted);font-weight:600;border-bottom:1px solid var(--border);background:#f8fafc;font-size:11px;white-space:nowrap;text-transform:uppercase;letter-spacing:0.4px}
+td{padding:9px 12px;border-bottom:1px solid var(--border);color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:160px;vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:#f8fafc}
+
+/* BADGES */
+.badge{display:inline-block;padding:3px 8px;border-radius:20px;font-size:10px;font-weight:700;letter-spacing:0.3px}
+.b-green{background:#d4edda;color:#155724}
+.b-red{background:#f8d7da;color:#721c24}
+.b-blue{background:#cce5ff;color:#004085}
+.b-gray{background:#e2e8f0;color:#4a5568}
+.b-yellow{background:#fff3cd;color:#856404}
+.b-navy{background:#e8f0fe;color:#0C2340}
+.status-disp{color:#27ae60;font-weight:700}
+.status-inch{color:#aaa;text-decoration:line-through}
+.zile-ok{color:#27ae60;font-weight:700}
+.zile-warn{color:#e67e22;font-weight:700}
+.zile-danger{color:var(--red);font-weight:700}
+
+/* BUTTONS */
+.btn-sm{background:transparent;border:1px solid var(--border);padding:3px 8px;border-radius:6px;font-size:11px;cursor:pointer;color:var(--muted)}
+.btn-sm:hover{background:var(--bg)}
+.btn-del{color:var(--red);border-color:#f5c6cb}
+.btn-del:hover{background:#f8d7da}
+
+/* MODAL */
+.modal-overlay{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:1000;align-items:center;justify-content:center}
+.modal-overlay.open{display:flex}
+.modal{background:var(--white);border-radius:12px;padding:24px;width:580px;max-width:95vw;max-height:90vh;overflow-y:auto}
+.modal-title{font-size:15px;font-weight:700;color:var(--navy);margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px}
+.modal-title .accent{width:4px;height:18px;background:var(--yellow);border-radius:2px}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.form-group-m{display:flex;flex-direction:column;gap:4px}
+.form-group-m.full{grid-column:1/-1}
+.form-group-m label{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.4px}
+.form-group-m input,.form-group-m select{padding:8px 10px;border:1px solid var(--border);border-radius:7px;font-size:13px;color:var(--text);outline:none}
+.form-group-m input:focus,.form-group-m select:focus{border-color:var(--navy)}
+.section-title{font-size:11px;font-weight:700;color:var(--navy);text-transform:uppercase;letter-spacing:0.5px;margin:14px 0 8px;padding-bottom:4px;border-bottom:1px solid var(--border);grid-column:1/-1}
+.toggle-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);grid-column:1/-1}
+.toggle-label{font-size:13px;color:var(--text);font-weight:500}
+.toggle{position:relative;width:40px;height:22px;cursor:pointer;flex-shrink:0}
+.toggle input{opacity:0;width:0;height:0}
+.tog-sl{position:absolute;top:0;left:0;right:0;bottom:0;background:#cbd5e0;border-radius:22px;transition:0.2s}
+.tog-sl:before{content:"";position:absolute;width:16px;height:16px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:0.2s}
+.toggle input:checked+.tog-sl{background:var(--navy)}
+.toggle input:checked+.tog-sl:before{transform:translateX(18px)}
+.modal-footer{display:flex;justify-content:flex-end;gap:8px;margin-top:16px;padding-top:14px;border-top:1px solid var(--border)}
+.btn-cancel{background:transparent;border:1px solid var(--border);padding:8px 16px;border-radius:7px;font-size:13px;cursor:pointer;color:var(--muted)}
+.btn-save{background:var(--navy);color:#fff;border:none;padding:8px 18px;border-radius:7px;font-size:13px;cursor:pointer;font-weight:600}
+.btn-save:hover{background:var(--navy2)}
+
+/* IMPORT */
+.import-zone{border:2px dashed var(--border);border-radius:10px;padding:32px;text-align:center;cursor:pointer;transition:all 0.15s;margin-bottom:14px}
+.import-zone:hover{border-color:var(--navy);background:#f8fafc}
+.import-icon{font-size:36px;margin-bottom:10px}
+.import-zone p{font-size:13px;color:var(--muted);margin-top:4px}
+.import-zone strong{color:var(--yellow)}
+.import-hint{font-size:11px;color:var(--muted);margin-top:8px;line-height:1.6}
+.import-result{padding:10px 14px;border-radius:7px;font-size:12px;margin-bottom:12px;display:none}
+.import-result.success{background:#d4edda;color:#155724;display:block}
+.import-result.error{background:#f8d7da;color:#721c24;display:block}
+
+/* EMPTY */
+.empty-state{padding:40px;text-align:center;color:var(--muted);font-size:13px}
+
+/* TOAST */
+.toast{position:fixed;bottom:24px;right:24px;background:var(--navy);color:#fff;padding:12px 20px;border-radius:8px;font-size:13px;z-index:9999;display:none;border-left:4px solid var(--yellow)}
+.toast.show{display:block}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-screen">
+<div class="login-card">
+  <div class="login-logo">
+    <div class="login-accent"></div>
+    <h1><span class="aps">APS</span> Portal</h1>
+    <p>Sistem de management proprietăți imobiliare</p>
+  </div>
+  <div class="form-group">
+    <label>Email</label>
+    <input type="email" id="login-email" placeholder="email@aps.ro" autocomplete="email">
+  </div>
+  <div class="form-group">
+    <label>Parolă</label>
+    <input type="password" id="login-pass" placeholder="••••••••" autocomplete="current-password">
+  </div>
+  <button class="btn-login" onclick="doLogin()">Autentificare</button>
+  <div class="login-error" id="login-error">Email sau parolă incorectă.</div>
+</div>
+</div>
+
+<!-- APP -->
+<div id="app-screen">
+<div class="sidebar">
+  <div class="sb-logo">
+    <div class="sb-logo-title"><span>APS</span> Portal</div>
+    <div class="sb-logo-sub">Brokeri Imobiliari</div>
+  </div>
+  <div class="sb-user">
+    <div class="sb-user-av" id="sb-av">AD</div>
+    <div class="sb-user-info">
+      <div class="sb-user-name" id="sb-name">Administrator</div>
+      <div class="sb-user-role" id="sb-role">Admin</div>
+    </div>
+  </div>
+  <div class="sb-section">
+    <div class="sb-label">Panou principal</div>
+    <a class="sb-item active" onclick="nav('home')" id="nav-home">🏠 Dashboard</a>
+  </div>
+  <div class="sb-section" id="dept-nav">
+    <div class="sb-label">Departamente</div>
+    <a class="sb-item" onclick="nav('retail')" id="nav-retail"><span class="sb-dept-dot" style="background:#F39C12"></span> Retail</a>
+    <a class="sb-item" onclick="nav('office')" id="nav-office"><span class="sb-dept-dot" style="background:#378ADD"></span> Office</a>
+    <a class="sb-item" onclick="nav('industrial')" id="nav-industrial"><span class="sb-dept-dot" style="background:#888"></span> Industrial</a>
+    <a class="sb-item" onclick="nav('rezidential')" id="nav-rezidential"><span class="sb-dept-dot" style="background:#5DCAA5"></span> Rezidențial</a>
+  </div>
+  <div class="sb-section" id="admin-nav" style="display:none">
+    <div class="sb-label">Administrare</div>
+    <a class="sb-item" onclick="nav('admin')" id="nav-admin">⚙️ Admin Portal</a>
+  </div>
+  <div class="sb-bottom">
+    <button class="btn-logout" onclick="doLogout()">🚪 Deconectare</button>
+  </div>
+</div>
+
+<div class="main">
+  <div class="topbar">
+    <div class="topbar-title" id="topbar-title">Dashboard</div>
+    <div class="topbar-date" id="topbar-date"></div>
+  </div>
+  <div class="content">
+
+    <!-- HOME -->
+    <div class="page active" id="page-home">
+      <div class="stats-row">
+        <div class="stat-card"><div class="stat-label">Total proprietăți</div><div class="stat-val" id="h-total">—</div></div>
+        <div class="stat-card"><div class="stat-label">Disponibile</div><div class="stat-val green" id="h-disp">—</div></div>
+        <div class="stat-card"><div class="stat-label">Închiriate</div><div class="stat-val red" id="h-inch">—</div></div>
+        <div class="stat-card"><div class="stat-label">Actualizate azi</div><div class="stat-val yellow" id="h-azi">—</div></div>
+      </div>
+      <div class="dept-grid">
+        <div class="dept-card" onclick="nav('retail')" style="border-top-color:#F39C12">
+          <div class="dept-card-icon" style="background:#fff3cd">🛍️</div>
+          <h3>Retail</h3><p>Spații comerciale, showroom-uri, restaurante</p>
+          <div class="cnt" style="color:#856404" id="cnt-retail">—</div>
+        </div>
+        <div class="dept-card" onclick="nav('office')" style="border-top-color:#378ADD">
+          <div class="dept-card-icon" style="background:#cce5ff">🏢</div>
+          <h3>Office</h3><p>Birouri, clădiri de birouri, coworking</p>
+          <div class="cnt" style="color:#004085" id="cnt-office">—</div>
+        </div>
+        <div class="dept-card" onclick="nav('industrial')" style="border-top-color:#888">
+          <div class="dept-card-icon" style="background:#e2e8f0">🏭</div>
+          <h3>Industrial</h3><p>Depozite, hale, spații logistice</p>
+          <div class="cnt" style="color:#4a5568" id="cnt-industrial">—</div>
+        </div>
+        <div class="dept-card" onclick="nav('rezidential')" style="border-top-color:#5DCAA5">
+          <div class="dept-card-icon" style="background:#d4edda">🏠</div>
+          <h3>Rezidențial</h3><p>Apartamente, case, vile</p>
+          <div class="cnt" style="color:#155724" id="cnt-rezidential">—</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- DEPT PAGES -->
+    <div class="page" id="page-retail"></div>
+    <div class="page" id="page-office"></div>
+    <div class="page" id="page-industrial"></div>
+    <div class="page" id="page-rezidential"></div>
+
+    <!-- ADMIN -->
+    <div class="page" id="page-admin">
+      <div style="display:flex;gap:10px;margin-bottom:18px;flex-wrap:wrap">
+        <button class="btn-import" onclick="openImport()">📥 Importă proprietăți din Excel/CSV</button>
+        <button class="btn-primary" onclick="openAdd()">+ Adaugă manual</button>
+      </div>
+      <div class="tbl-wrap">
+        <div class="tbl-head"><div class="tbl-head-title">Toate proprietățile — Admin</div></div>
+        <div class="tbl-scroll"><table>
+          <thead><tr>
+            <th>Dept</th><th>Locație</th><th>Județ</th><th>Sector/Zonă</th>
+            <th>Contact</th><th>Telefon</th><th>Verificat</th>
+            <th>Zile</th><th>Site Retail</th><th>Imobiliare.ro</th>
+            <th>Status</th><th>Acțiuni</th>
+          </tr></thead>
+          <tbody id="admin-body"><tr><td colspan="12" class="empty-state">Se încarcă...</td></tr></tbody>
+        </table></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+</div>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal" id="modal-box"></div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+const SUPABASE_URL = 'https://hgkwcldrfudajpokfysx.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_teIr4RdisvtihSpYQ3o_EQ_XMcsyq43';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+const JUDETE = {
+  "București":["București"],"Cluj":["Cluj-Napoca","Turda","Dej","Câmpia Turzii"],
+  "Ilfov":["Voluntari","Buftea","Otopeni","Pantelimon"],"Timiș":["Timișoara","Lugoj","Deta"],
+  "Iași":["Iași","Pașcani","Hârlău"],"Constanța":["Constanța","Mangalia","Medgidia"],
+  "Brașov":["Brașov","Codlea","Săcele","Predeal"],"Prahova":["Ploiești","Câmpina","Sinaia"],
+  "Dolj":["Craiova","Băilești","Calafat"],"Galați":["Galați","Tecuci"],"Mureș":["Târgu Mureș","Reghin"],
+  "Bihor":["Oradea","Salonta"],"Sibiu":["Sibiu","Mediaș"],"Bacău":["Bacău","Onești"],
+  "Argeș":["Pitești","Câmpulung"],"Dâmbovița":["Târgoviște","Moreni"],"Vâlcea":["Râmnicu Vâlcea","Drăgășani"]
+};
+const SECTOARE = ["Sector 1","Sector 2","Sector 3","Sector 4","Sector 5","Sector 6"];
+const ZONE_BUC = ["Victoriei","Dorobanți","Floreasca","Unirii","Universitate","Cotroceni","Militari","Pipera","Băneasa","Titan","Drumul Taberei","Aviației","Iancului","Colentina","Tineretului","Rahova"];
+const DEPTS = ["Retail","Office","Industrial","Rezidențial"];
+
+let currentUser = null;
+let currentRole = null;
+let allData = [];
+
+// AUTH
+async function doLogin() {
+  const email = document.getElementById('login-email').value.trim();
+  const pass = document.getElementById('login-pass').value;
+  const errEl = document.getElementById('login-error');
+  errEl.style.display = 'none';
+  const {data, error} = await sb.auth.signInWithPassword({email, password: pass});
+  if (error) { errEl.style.display = 'block'; return; }
+  currentUser = data.user;
+  await loadUserRole();
+}
+
+async function loadUserRole() {
+  const {data} = await sb.from('user_roles').select('*').eq('user_id', currentUser.id).single();
+  if (data) {
+    currentRole = data.role;
+    const initials = (data.nume || currentUser.email).substring(0,2).toUpperCase();
+    document.getElementById('sb-av').textContent = initials;
+    document.getElementById('sb-name').textContent = data.nume || currentUser.email;
+    document.getElementById('sb-role').textContent = currentRole.charAt(0).toUpperCase() + currentRole.slice(1);
+    setupNav();
+    showApp();
+    await loadAllData();
+  }
+}
+
+function setupNav() {
+  const isAdmin = currentRole === 'admin';
+  if (isAdmin) {
+    document.getElementById('admin-nav').style.display = 'block';
+  }
+  // Non-admin: hide other dept nav items
+  if (!isAdmin) {
+    ['retail','office','industrial','rezidential'].forEach(d => {
+      const el = document.getElementById('nav-'+d);
+      if (el && d !== currentRole) el.style.display = 'none';
+    });
+  }
+}
+
+function showApp() {
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('app-screen').style.display = 'flex';
+  document.getElementById('topbar-date').textContent = new Date().toLocaleDateString('ro-RO',{day:'numeric',month:'long',year:'numeric'});
+  if (currentRole !== 'admin') nav(currentRole);
+}
+
+async function doLogout() {
+  await sb.auth.signOut();
+  location.reload();
+}
+
+// DATA
+async function loadAllData() {
+  const {data, error} = await sb.from('proprietati').select('*').order('created_at', {ascending: false});
+  if (!error && data) {
+    allData = data;
+    refreshAll();
+  }
+}
+
+function zileUpdate(d) {
+  if (!d) return 999;
+  const azi = new Date(); azi.setHours(0,0,0,0);
+  const v = new Date(d); v.setHours(0,0,0,0);
+  return Math.round((azi-v)/(1000*60*60*24));
+}
+function zileClass(z) { return z<=3?'zile-ok':z<=14?'zile-warn':'zile-danger'; }
+function badgeYN(v) { return v?'<span class="badge b-green">DA</span>':'<span class="badge b-red">NU</span>'; }
+function badgeStatus(s) { return s==='Disponibil'?'<span class="status-disp">'+s+'</span>':'<span class="status-inch">'+s+'</span>'; }
+function deptBadge(d) {
+  const c={'Retail':'b-yellow','Office':'b-navy','Industrial':'b-gray','Rezidențial':'b-green'};
+  return '<span class="badge '+(c[d]||'b-gray')+'">'+d+'</span>';
+}
+
+function refreshAll() {
+  const total = allData.length;
+  const disp = allData.filter(r=>r.status==='Disponibil').length;
+  const inch = allData.filter(r=>r.status==='Închiriat').length;
+  const azi = allData.filter(r=>zileUpdate(r.verificat)===0).length;
+  document.getElementById('h-total').textContent = total;
+  document.getElementById('h-disp').textContent = disp;
+  document.getElementById('h-inch').textContent = inch;
+  document.getElementById('h-azi').textContent = azi;
+  DEPTS.forEach(d => {
+    const key = d.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace('ț','t').replace('ă','a');
+    const el = document.getElementById('cnt-'+key);
+    if (el) el.textContent = allData.filter(r=>r.dept===d).length;
+  });
+  DEPTS.forEach(d => renderDept(d));
+  renderAdmin();
+}
+
+function renderDept(dept) {
+  const key = dept.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z]/g,'');
+  const pageId = 'page-'+key;
+  const p = document.getElementById(pageId);
+  if (!p) return;
+  const rows = allData.filter(r=>r.dept===dept);
+  const colors = {'Retail':'#856404','Office':'#004085','Industrial':'#4a5568','Rezidențial':'#155724'};
+  const color = colors[dept]||'#333';
+  p.innerHTML = `
+  <div class="stats-row">
+    <div class="stat-card"><div class="stat-label">Total</div><div class="stat-val">${rows.length}</div></div>
+    <div class="stat-card"><div class="stat-label">Disponibile</div><div class="stat-val green">${rows.filter(r=>r.status==='Disponibil').length}</div></div>
+    <div class="stat-card"><div class="stat-label">Închiriate</div><div class="stat-val red">${rows.filter(r=>r.status==='Închiriat').length}</div></div>
+    <div class="stat-card"><div class="stat-label">Pe Site Retail</div><div class="stat-val yellow">${rows.filter(r=>r.site_retail).length}</div></div>
+  </div>
+  <div class="filters-bar">
+    <div class="filter-group"><label>Județ</label><select id="f${key}-jud" onchange="applyFilters('${key}','${dept}')"><option value="">Toate</option>${Object.keys(JUDETE).map(j=>'<option>'+j+'</option>').join('')}</select></div>
+    <div class="filter-group"><label>Contact</label><select id="f${key}-cont" onchange="applyFilters('${key}','${dept}')"><option value="">Toți</option>${[...new Set(rows.map(r=>r.contact).filter(Boolean))].map(c=>'<option>'+c+'</option>').join('')}</select></div>
+    <div class="filter-group"><label>Status</label><select id="f${key}-stat" onchange="applyFilters('${key}','${dept}')"><option value="">Toate</option><option>Disponibil</option><option>Închiriat</option></select></div>
+    <div class="filter-group"><label>Site Retail</label><select id="f${key}-site" onchange="applyFilters('${key}','${dept}')"><option value="">Toate</option><option value="1">Da</option><option value="0">Nu</option></select></div>
+    <div class="filter-group"><label>Imobiliare.ro</label><select id="f${key}-imob" onchange="applyFilters('${key}','${dept}')"><option value="">Toate</option><option value="1">Da</option><option value="0">Nu</option></select></div>
+    <button class="btn-filter-reset" onclick="resetFilters('${key}','${dept}')">✕ Reset</button>
+  </div>
+  <div class="tbl-wrap">
+    <div class="tbl-head">
+      <div class="tbl-head-title" style="color:${color}">${dept} — Proprietăți</div>
+      ${currentRole==='admin'?`<button class="btn-primary" onclick="openAdd('${dept}')">+ Adaugă</button>`:''}
+    </div>
+    <div class="tbl-scroll"><table>
+      <thead><tr>
+        <th>Locație</th><th>Județ</th><th>Sector/Zonă</th>
+        <th>Contact</th><th>Telefon</th>
+        <th>Verificat</th><th>Zile</th>
+        <th>Site Retail</th><th>Imobiliare.ro</th>
+        <th>Status</th>${currentRole==='admin'?'<th>Acțiuni</th>':''}
+      </tr></thead>
+      <tbody id="tbody-${key}"></tbody>
+    </table></div>
+  </div>`;
+  applyFilters(key, dept);
+}
+
+function applyFilters(key, dept) {
+  const jud = (document.getElementById('f'+key+'-jud')||{}).value||'';
+  const cont = (document.getElementById('f'+key+'-cont')||{}).value||'';
+  const stat = (document.getElementById('f'+key+'-stat')||{}).value||'';
+  const site = (document.getElementById('f'+key+'-site')||{}).value||'';
+  const imob = (document.getElementById('f'+key+'-imob')||{}).value||'';
+  let rows = allData.filter(r => r.dept===dept &&
+    (!jud||r.judet===jud) && (!cont||r.contact===cont) && (!stat||r.status===stat) &&
+    (site===''||(site==='1'?r.site_retail:!r.site_retail)) &&
+    (imob===''||(imob==='1'?r.imobiliare:!r.imobiliare))
+  );
+  const tb = document.getElementById('tbody-'+key);
+  if (!tb) return;
+  if (!rows.length) { tb.innerHTML='<tr><td colspan="12" class="empty-state">Nicio proprietate găsită.</td></tr>'; return; }
+  tb.innerHTML = rows.map(r => {
+    const zi = zileUpdate(r.verificat);
+    const loc = r.judet==='București'?((r.sector||'')+' — '+(r.zona||'')):r.oras||'';
+    return `<tr>
+      <td title="${r.locatie||''}">${r.locatie||'—'}</td>
+      <td>${r.judet||'—'}</td><td>${loc||'—'}</td>
+      <td title="${r.email||''}">${r.contact||'—'}</td>
+      <td>${r.telefon||'—'}</td>
+      <td>${r.verificat||'—'}</td>
+      <td class="${zileClass(zi)}">${zi<999?zi+'z':'—'}</td>
+      <td>${badgeYN(r.site_retail)}</td>
+      <td>${badgeYN(r.imobiliare)}</td>
+      <td>${badgeStatus(r.status||'Disponibil')}</td>
+      ${currentRole==='admin'?`<td><button class="btn-sm btn-del" onclick="delRow('${r.id}')">Șterge</button></td>`:''}
+    </tr>`;
+  }).join('');
+}
+
+function resetFilters(key, dept) {
+  ['jud','cont','stat','site','imob'].forEach(f => {
+    const el = document.getElementById('f'+key+'-'+f);
+    if (el) el.value = '';
+  });
+  applyFilters(key, dept);
+}
+
+function renderAdmin() {
+  const tb = document.getElementById('admin-body');
+  if (!tb) return;
+  if (!allData.length) { tb.innerHTML='<tr><td colspan="12" class="empty-state">Nicio proprietate în baza de date.</td></tr>'; return; }
+  tb.innerHTML = allData.map(r => {
+    const zi = zileUpdate(r.verificat);
+    return `<tr>
+      <td>${deptBadge(r.dept)}</td>
+      <td title="${r.locatie||''}">${r.locatie||'—'}</td>
+      <td>${r.judet||'—'}</td>
+      <td>${r.judet==='București'?(r.sector||''):r.oras||'—'}</td>
+      <td>${r.contact||'—'}</td><td>${r.telefon||'—'}</td>
+      <td>${r.verificat||'—'}</td>
+      <td class="${zileClass(zi)}">${zi<999?zi+'z':'—'}</td>
+      <td>${badgeYN(r.site_retail)}</td>
+      <td>${badgeYN(r.imobiliare)}</td>
+      <td>${badgeStatus(r.status||'Disponibil')}</td>
+      <td><button class="btn-sm btn-del" onclick="delRow('${r.id}')">Șterge</button></td>
+    </tr>`;
+  }).join('');
+}
+
+async function delRow(id) {
+  if (!confirm('Ștergi această proprietate?')) return;
+  const {error} = await sb.from('proprietati').delete().eq('id', id);
+  if (!error) { showToast('Proprietate ștearsă!'); await loadAllData(); }
+}
+
+// ADD MODAL
+let editingDept = 'Retail';
+function openAdd(dept) {
+  editingDept = dept || 'Retail';
+  const judetOpts = Object.keys(JUDETE).map(j=>`<option${j==='București'?' selected':''}>` +j+'</option>').join('');
+  document.getElementById('modal-box').innerHTML = `
+  <div class="modal-title"><div class="accent"></div> Adaugă proprietate nouă</div>
+  <div class="form-grid">
+    <div class="form-group-m"><label>Departament *</label>
+      <select id="fa-dept">${DEPTS.map(d=>`<option${d===editingDept?' selected':''}>${d}</option>`).join('')}</select></div>
+    <div class="form-group-m"><label>Status *</label>
+      <select id="fa-status"><option>Disponibil</option><option>Închiriat</option></select></div>
+    <div class="form-group-m full"><label>Adresă</label><input id="fa-loc" placeholder="Str. Exemplu 10"></div>
+    <div class="form-group-m"><label>Județ</label>
+      <select id="fa-jud" onchange="updateOrase()">${judetOpts}</select></div>
+    <div class="form-group-m"><label>Oraș</label>
+      <select id="fa-oras" onchange="updateSector()"><option>București</option></select></div>
+    <div class="form-group-m" id="grp-sector"><label>Sector</label>
+      <select id="fa-sector">${SECTOARE.map(s=>'<option>'+s+'</option>').join('')}</select></div>
+    <div class="form-group-m" id="grp-zona"><label>Zonă</label>
+      <select id="fa-zona">${ZONE_BUC.map(z=>'<option>'+z+'</option>').join('')}</select></div>
+    <div class="section-title">Date de contact</div>
+    <div class="form-group-m"><label>Persoană de contact</label><input id="fa-contact" placeholder="Nume Prenume"></div>
+    <div class="form-group-m"><label>Telefon contact</label><input id="fa-tel" placeholder="07xx xxx xxx"></div>
+    <div class="form-group-m full"><label>Email contact</label><input id="fa-email" placeholder="email@aps.ro"></div>
+    <div class="section-title">Detalii proprietate</div>
+    <div class="form-group-m"><label>Suprafață (mp)</label><input id="fa-sup" type="number" placeholder="100"></div>
+    <div class="form-group-m"><label>Chirie €/mp</label><input id="fa-chir" type="number" placeholder="15"></div>
+    <div class="form-group-m full"><label>Data ultimei verificări</label>
+      <input id="fa-verif" type="date" value="${new Date().toISOString().slice(0,10)}"></div>
+    <div class="toggle-row">
+      <span class="toggle-label">Promovat pe Site Retail</span>
+      <label class="toggle"><input type="checkbox" id="fa-site"><span class="tog-sl"></span></label>
+    </div>
+    <div class="toggle-row">
+      <span class="toggle-label">Promovat pe Imobiliare.ro</span>
+      <label class="toggle"><input type="checkbox" id="fa-imob"><span class="tog-sl"></span></label>
+    </div>
+  </div>
+  <div class="modal-footer">
+    <button class="btn-cancel" onclick="closeModal()">Anulează</button>
+    <button class="btn-save" onclick="saveAdd()">Salvează proprietate</button>
+  </div>`;
+  document.getElementById('modal-overlay').classList.add('open');
+  updateOrase();
+}
+
+function updateOrase() {
+  const j = document.getElementById('fa-jud').value;
+  const o = document.getElementById('fa-oras');
+  o.innerHTML = (JUDETE[j]||[]).map(c=>'<option>'+c+'</option>').join('');
+  updateSector();
+}
+function updateSector() {
+  const isBuc = document.getElementById('fa-oras').value === 'București';
+  document.getElementById('grp-sector').style.display = isBuc?'flex':'none';
+  document.getElementById('grp-zona').style.display = isBuc?'flex':'none';
+}
+
+async function saveAdd() {
+  const judet = document.getElementById('fa-jud').value;
+  const isBuc = judet === 'București';
+  const obj = {
+    dept: document.getElementById('fa-dept').value,
+    locatie: document.getElementById('fa-loc').value||'',
+    judet, oras: document.getElementById('fa-oras').value,
+    sector: isBuc?(document.getElementById('fa-sector').value||''):'',
+    zona: isBuc?(document.getElementById('fa-zona').value||''):'',
+    contact: document.getElementById('fa-contact').value||'',
+    telefon: document.getElementById('fa-tel').value||'',
+    email: document.getElementById('fa-email').value||'',
+    verificat: document.getElementById('fa-verif').value||null,
+    site_retail: document.getElementById('fa-site').checked,
+    imobiliare: document.getElementById('fa-imob').checked,
+    status: document.getElementById('fa-status').value,
+    suprafata: parseFloat(document.getElementById('fa-sup').value)||null,
+    chirie: parseFloat(document.getElementById('fa-chir').value)||null
+  };
+  const {error} = await sb.from('proprietati').insert([obj]);
+  if (!error) { closeModal(); showToast('Proprietate adăugată!'); await loadAllData(); }
+  else alert('Eroare: '+error.message);
+}
+
+// IMPORT
+function openImport() {
+  document.getElementById('modal-box').innerHTML = `
+  <div class="modal-title"><div class="accent"></div> Import Excel / CSV</div>
+  <div class="import-zone" onclick="document.getElementById('file-imp').click()">
+    <div class="import-icon">📥</div>
+    <p>Click pentru a selecta fișierul<br><strong>Excel (.xlsx) sau CSV (.csv)</strong></p>
+    <div class="import-hint">
+      Coloane așteptate:<br>
+      <b>Departament, Locatie, Judet, Oras, Sector, Zona, Contact, Telefon, Email, Data_Verificare, Suprafata, Chirie, Site_Retail (Da/Nu), Imobiliare (Da/Nu), Status</b>
+    </div>
+  </div>
+  <input type="file" id="file-imp" accept=".csv,.xlsx" style="display:none" onchange="handleImport(this)">
+  <div id="imp-result"></div>
+  <div class="modal-footer">
+    <button class="btn-cancel" onclick="closeModal()">Închide</button>
+  </div>`;
+  document.getElementById('modal-overlay').classList.add('open');
+}
+
+async function handleImport(input) {
+  const f = input.files[0]; if (!f) return;
+  const res = document.getElementById('imp-result');
+  res.className = 'import-result'; res.textContent = 'Se procesează...'; res.style.display='block';
+  try {
+    let rows = [];
+    if (f.name.endsWith('.csv')) {
+      const text = await f.text();
+      const lines = text.split('\n').filter(l=>l.trim());
+      const headers = lines[0].split(',').map(h=>h.trim().replace(/"/g,''));
+      for (let i=1;i<lines.length;i++) {
+        const vals = lines[i].split(',').map(v=>v.trim().replace(/"/g,''));
+        const row = {}; headers.forEach((h,idx)=>row[h]=vals[idx]||'');
+        rows.push(row);
+      }
+    } else {
+      const buf = await f.arrayBuffer();
+      const wb = XLSX.read(buf);
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      rows = XLSX.utils.sheet_to_json(ws);
+    }
+    const toInsert = rows.map(r => ({
+      dept: r['Departament']||r['dept']||'Retail',
+      locatie: r['Locatie']||r['locatie']||'',
+      judet: r['Judet']||r['judet']||'București',
+      oras: r['Oras']||r['oras']||'',
+      sector: r['Sector']||r['sector']||'',
+      zona: r['Zona']||r['zona']||'',
+      contact: r['Contact']||r['contact']||'',
+      telefon: r['Telefon']||r['telefon']||'',
+      email: r['Email']||r['email']||'',
+      verificat: r['Data_Verificare']||r['Data Verificare']||null,
+      site_retail: ['da','yes','1','true'].includes(String(r['Site_Retail']||r['Site Retail']||'').toLowerCase()),
+      imobiliare: ['da','yes','1','true'].includes(String(r['Imobiliare']||'').toLowerCase()),
+      status: r['Status']||'Disponibil',
+      suprafata: parseFloat(r['Suprafata']||r['suprafata'])||null,
+      chirie: parseFloat(r['Chirie']||r['chirie'])||null
+    }));
+    const {error} = await sb.from('proprietati').insert(toInsert);
+    if (!error) {
+      res.className = 'import-result success';
+      res.textContent = '✓ '+toInsert.length+' proprietăți importate și sortate pe departamente!';
+      await loadAllData();
+    } else {
+      res.className = 'import-result error';
+      res.textContent = 'Eroare import: '+error.message;
+    }
+  } catch(e) {
+    res.className = 'import-result error';
+    res.textContent = 'Eroare la citirea fișierului: '+e.message;
+  }
+}
+
+function closeModal() { document.getElementById('modal-overlay').classList.remove('open'); }
+
+function nav(p) {
+  document.querySelectorAll('.page').forEach(el=>el.classList.remove('active'));
+  document.querySelectorAll('.sb-item').forEach(el=>el.classList.remove('active'));
+  const titles = {home:'Dashboard',retail:'Departament Retail',office:'Departament Office',industrial:'Departament Industrial',rezidential:'Departament Rezidențial',admin:'Admin Portal'};
+  const pageMap = {home:'page-home',retail:'page-retail',office:'page-office',industrial:'page-industrial',rezidential:'page-rezidential',admin:'page-admin'};
+  const pg = document.getElementById(pageMap[p]);
+  if (pg) pg.classList.add('active');
+  const navEl = document.getElementById('nav-'+p);
+  if (navEl) navEl.classList.add('active');
+  document.getElementById('topbar-title').textContent = titles[p]||p;
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 3000);
+}
+
+document.getElementById('login-pass').addEventListener('keydown', e=>{ if(e.key==='Enter') doLogin(); });
+</script>
+</body>
+</html>
