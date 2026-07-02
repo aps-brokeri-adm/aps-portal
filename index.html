@@ -197,6 +197,7 @@ tr.row-danger td{background:#fff5f5}
   <div class="sb-section" id="admin-nav" style="display:none">
     <div class="sb-label">Administrare</div>
     <a class="sb-item" onclick="nav('admin')" id="nav-admin">⚙️ Admin Portal</a>
+    <a class="sb-item" onclick="nav('cos')" id="nav-cos">🗑️ Coș de gunoi</a>
   </div>
   <div class="sb-bottom"><button class="btn-logout" onclick="doLogout()">🚪 Deconectare</button></div>
 </div>
@@ -318,7 +319,7 @@ function showApp(){
 async function doLogout(){await sb.auth.signOut();location.reload();}
 
 async function loadAllData(){
-  const {data,error}=await sb.from('proprietati').select('*').order('created_at',{ascending:false});
+  const {data,error}=await sb.from('proprietati').select('*').is('deleted_at',null).order('created_at',{ascending:false});
   if(!error&&data){allData=data;refreshAll();}
 }
 
@@ -498,7 +499,24 @@ function globalSearch(val){
   </tr>`).join('');
 }
 
-async function delRow(id){if(!confirm('Ștergi această proprietate?'))return;const{error}=await sb.from('proprietati').delete().eq('id',id);if(!error){showToast('Proprietate ștearsă!');await loadAllData();}}
+async function delRow(id){
+  const r=allData.find(x=>x.id===id);
+  const name=r?(r.locatie||r.dept||'proprietatea'):'proprietatea';
+  if(!confirm('Ești sigur că vrei să ștergi "'+name+'"?\n\nProprietatea va fi mutată în Coșul de gunoi și poate fi recuperată în 30 de zile.'))return;
+  const{error}=await sb.from('proprietati').update({deleted_at:new Date().toISOString()}).eq('id',id);
+  if(!error){showToast('Mutat în coșul de gunoi! ✅');await loadAllData();}
+}
+
+async function restoreRow(id){
+  const{error}=await sb.from('proprietati').update({deleted_at:null}).eq('id',id);
+  if(!error){showToast('Proprietate restaurată! ✅');await loadAllData();}
+}
+
+async function delRowPermanent(id){
+  if(!confirm('ATENȚIE! Ștergi DEFINITIV această proprietate?\nAceastă acțiune NU poate fi anulată!'))return;
+  const{error}=await sb.from('proprietati').delete().eq('id',id);
+  if(!error){showToast('Proprietate ștearsă definitiv.');await loadAllData();}
+}
 
 function buildForm(data,dept,title){
   const d=data||{};
@@ -609,7 +627,7 @@ function exportToExcel(rows,name){
 
 function closeModal(){document.getElementById('modal-overlay').classList.remove('open');}
 
-const pages={home:'Dashboard',raport:'Rapoarte',retail:'Retail',office:'Office',industrial:'Industrial',rezidential:'Rezidențial',admin:'Admin Portal',search:'Căutare globală'};
+const pages={home:'Dashboard',raport:'Rapoarte',retail:'Retail',office:'Office',industrial:'Industrial',rezidential:'Rezidențial',admin:'Admin Portal',cos:'Coș de gunoi',search:'Căutare globală'};
 function nav(p){
   document.querySelectorAll('.page').forEach(el=>el.classList.remove('active'));
   document.querySelectorAll('.sb-item').forEach(el=>el.classList.remove('active'));
@@ -620,6 +638,25 @@ function nav(p){
   document.getElementById('topbar-title').textContent=pages[p]||p;
   
   if(p==='raport')renderRaport();
+  if(p==='cos')loadCos();
+}
+
+async function loadCos(){
+  const{data,error}=await sb.from('proprietati').select('*').not('deleted_at','is',null).order('deleted_at',{ascending:false});
+  const tb=document.getElementById('cos-body');
+  if(!tb)return;
+  if(!data||!data.length){tb.innerHTML='<tr><td colspan="6" class="empty-state">Coșul de gunoi este gol ✅</td></tr>';return;}
+  tb.innerHTML=data.map(r=>`<tr>
+    <td>${deptBadge(r.dept)}</td>
+    <td title="${r.locatie||''}">${r.locatie||'—'}</td>
+    <td>${r.contact||'—'}</td>
+    <td>${badgeStatus(r.status||'Disponibil')}</td>
+    <td style="color:#C0392B;font-size:11px">${r.deleted_at?new Date(r.deleted_at).toLocaleDateString('ro-RO'):'—'}</td>
+    <td>
+      <button class="btn-sm btn-edit" onclick="restoreRow('${r.id}')">↩️ Restaurează</button>
+      <button class="btn-sm btn-del" onclick="delRowPermanent('${r.id}')">🗑️ Șterge definitiv</button>
+    </td>
+  </tr>`).join('');
 }
 
 function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),3000);}
