@@ -647,7 +647,7 @@ function nav(p){
 }
 
 async function loadCos(tbId,dept){
-  let query=sb.from('proprietati').select('*').neq('deleted_at',null).order('deleted_at',{ascending:false});
+  let query=supabase.createClient(SUPABASE_URL,SUPABASE_KEY).from('proprietati').select('*').not('deleted_at','is',null).order('deleted_at',{ascending:false});
   if(dept)query=query.eq('dept',dept);
   const{data,error}=await query;
   const tb=document.getElementById(tbId);
