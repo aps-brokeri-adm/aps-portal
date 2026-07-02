@@ -201,6 +201,7 @@ tr.row-danger td{background:#fff5f5}
     <div class="sb-label">Administrare</div>
     <a class="sb-item" onclick="nav('admin')" id="nav-admin">⚙️ Admin Portal</a>
     <a class="sb-item" onclick="nav('cos')" id="nav-cos">🗑️ Coș de gunoi</a>
+    <a class="sb-item" onclick="nav('istoric')" id="nav-istoric">📝 Istoric modificări</a>
   </div>
   <div class="sb-bottom"><button class="btn-logout" onclick="doLogout()">🚪 Deconectare</button></div>
 </div>
@@ -251,6 +252,16 @@ tr.row-danger td{background:#fff5f5}
         <div class="tbl-scroll"><table>
           <thead><tr><th>Dept</th><th>Locație</th><th>Județ</th><th>Sector/Zonă</th><th>Contact</th><th>Telefon</th><th>Email</th><th>Verificat</th><th>Zile</th><th>Site</th><th>Imob.</th><th>Status</th><th>Acțiuni</th></tr></thead>
           <tbody id="admin-body"><tr><td colspan="13" class="empty-state">Se încarcă...</td></tr></tbody>
+        </table></div>
+      </div>
+    </div>
+
+    <div class="page" id="page-istoric">
+      <div class="tbl-wrap">
+        <div class="tbl-head"><div class="tbl-head-title">📝 Istoric modificări</div></div>
+        <div class="tbl-scroll"><table>
+          <thead><tr><th>Data</th><th>Utilizator</th><th>Acțiune</th><th>Detalii</th></tr></thead>
+          <tbody id="istoric-body"><tr><td colspan="4" class="empty-state">Se încarcă...</td></tr></tbody>
         </table></div>
       </div>
     </div>
@@ -528,7 +539,10 @@ async function delRow(id){
   const name=r?(r.locatie||r.dept||'proprietatea'):'proprietatea';
   if(!confirm('Ești sigur că vrei să ștergi "'+name+'"?\n\nProprietatea va fi mutată în Coșul de gunoi și poate fi recuperată în 30 de zile.'))return;
   const{error}=await sb.from('proprietati').update({deleted_at:new Date().toISOString()}).eq('id',id);
-  if(!error){showToast('Mutat în coșul de gunoi! ✅');await loadAllData();}
+  if(!error){
+    await logActivity(id,'ȘTERS','Mutat în coș: '+name);
+    showToast('Mutat în coșul de gunoi! ✅');await loadAllData();
+  }
 }
 
 async function restoreRow(id){
@@ -588,8 +602,22 @@ function getFormData(){
   return{dept:document.getElementById('fa-dept').value,locatie:document.getElementById('fa-loc').value||'',judet,oras:document.getElementById('fa-oras').value,sector:isBuc?(document.getElementById('fa-sector').value||''):'',zona:isBuc?(document.getElementById('fa-zona').value||''):'',contact:document.getElementById('fa-contact').value||'',telefon:document.getElementById('fa-tel').value||'',email:document.getElementById('fa-email').value||'',verificat:document.getElementById('fa-verif').value||null,site_retail:document.getElementById('fa-site').checked,imobiliare:document.getElementById('fa-imob').checked,status:document.getElementById('fa-status').value,suprafata:parseFloat(document.getElementById('fa-sup').value)||null,chirie:parseFloat(document.getElementById('fa-chir').value)||null};
 }
 
-async function saveAdd(){const obj=getFormData();const{error}=await sb.from('proprietati').insert([obj]);if(!error){closeModal();showToast('Proprietate adăugată! ✅');await loadAllData();}else alert('Eroare: '+error.message);}
-async function saveEdit(id){const obj=getFormData();const{error}=await sb.from('proprietati').update(obj).eq('id',id);if(!error){closeModal();showToast('Proprietate actualizată! ✅');await loadAllData();}else alert('Eroare: '+error.message);}
+async function saveAdd(){
+  const obj=getFormData();
+  const{data,error}=await sb.from('proprietati').insert([obj]).select();
+  if(!error&&data&&data[0]){
+    await logActivity(data[0].id,'ADĂUGAT','Proprietate nouă: '+(obj.locatie||obj.dept));
+    closeModal();showToast('Proprietate adăugată! ✅');await loadAllData();
+  }else if(error) alert('Eroare: '+error.message);
+}
+async function saveEdit(id){
+  const obj=getFormData();
+  const{error}=await sb.from('proprietati').update(obj).eq('id',id);
+  if(!error){
+    await logActivity(id,'EDITAT','Modificat: '+(obj.locatie||obj.dept)+' | Status: '+obj.status+' | Verificat: '+obj.verificat);
+    closeModal();showToast('Proprietate actualizată! ✅');await loadAllData();
+  }else alert('Eroare: '+error.message);
+}
 
 function updateOrase(){
   const j=document.getElementById('fa-jud').value;
@@ -663,10 +691,28 @@ function nav(p){
   
   if(p==='raport')renderRaport();
   if(p==='cos')loadCos('cos-body',null);
+  if(p==='istoric')loadIstoric();
   if(p==='cos-retail')loadCosDept('retail','Retail');
   if(p==='cos-office')loadCosDept('office','Office');
   if(p==='cos-industrial')loadCosDept('industrial','Industrial');
   if(p==='cos-rezidential')loadCosDept('rezidential','Rezidențial');
+}
+
+async function loadIstoric(){
+  const{data,error}=await sb.from('istoric_modificari').select('*').order('created_at',{ascending:false}).limit(100);
+  const tb=document.getElementById('istoric-body');
+  if(!tb)return;
+  if(!data||!data.length){tb.innerHTML='<tr><td colspan="4" class="empty-state">Nicio modificare înregistrată.</td></tr>';return;}
+  tb.innerHTML=data.map(r=>{
+    const data_ora=new Date(r.created_at).toLocaleString('ro-RO');
+    const actiuneColor=r.actiune==='ADĂUGAT'?'b-green':r.actiune==='EDITAT'?'b-navy':'b-red';
+    return `<tr>
+      <td style="font-size:11px;color:#718096">${data_ora}</td>
+      <td>${r.user_email||'—'}</td>
+      <td><span class="badge ${actiuneColor}">${r.actiune}</span></td>
+      <td style="max-width:300px;white-space:normal;font-size:11px">${r.detalii||'—'}</td>
+    </tr>`;
+  }).join('');
 }
 
 async function loadCos(tbId,dept){
@@ -719,6 +765,18 @@ function checkBackupReminder(){
 function closeReminder(){
   document.getElementById('backup-reminder').style.display='none';
   localStorage.setItem('lastBackupReminder', new Date().toISOString().slice(0,10));
+}
+
+async function logActivity(proprietateId, actiune, detalii){
+  try{
+    await sb.from('istoric_modificari').insert([{
+      proprietate_id: proprietateId,
+      user_email: currentUser.email,
+      actiune: actiune,
+      detalii: detalii,
+      created_at: new Date().toISOString()
+    }]);
+  }catch(e){console.log('Log error:',e);}
 }
 
 function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),3000);}
