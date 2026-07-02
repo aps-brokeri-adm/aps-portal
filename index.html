@@ -578,7 +578,42 @@ function buildForm(data,dept,title){
     <div class="form-group-m full"><label>Data ultimei verificări</label><input id="fa-verif" type="date" value="${d.verificat||new Date().toISOString().slice(0,10)}"></div>
     <div class="toggle-row"><span class="toggle-label">Promovat pe Site Retail</span><label class="toggle"><input type="checkbox" id="fa-site"${d.site_retail?' checked':''}><span class="tog-sl"></span></label></div>
     <div class="toggle-row"><span class="toggle-label">Promovat pe Imobiliare.ro</span><label class="toggle"><input type="checkbox" id="fa-imob"${d.imobiliare?' checked':''}><span class="tog-sl"></span></label></div>
-  </div>`;
+    ${(d.dept||dept)==='Office'?`
+    <div class="section-title">Câmpuri Office</div>
+    <div class="form-group-m"><label>Broker Responsabil</label><input id="fa-broker_resp" placeholder="Nume broker" value="${d.broker_responsabil||''}"></div>
+    <div class="form-group-m"><label>Action</label><input id="fa-action" placeholder="Action" value="${d.action_office||''}"></div>
+    <div class="form-group-m"><label>Acord GDPR</label><select id="fa-gdpr"><option${(d.acord_gdpr||'')==='Da'?' selected':''}>Da</option><option${(d.acord_gdpr||'')==='Nu'?' selected':''}>Nu</option><option${!(d.acord_gdpr)?' selected':''} value="">—</option></select></div>
+    <div class="form-group-m"><label>District</label><input id="fa-district" placeholder="District" value="${d.district||''}"></div>
+    <div class="form-group-m"><label>FEE nr. luni</label><input id="fa-fee_luni" type="number" placeholder="0" value="${d.fee_luni||''}"></div>
+    <div class="form-group-m"><label>FEE Contract Start</label><input id="fa-fee_start" type="date" value="${d.fee_contract_start||''}"></div>
+    <div class="form-group-m"><label>FEE Contract End</label><input id="fa-fee_end" type="date" value="${d.fee_contract_end||''}"></div>
+    <div class="form-group-m"><label>Phase</label><input id="fa-phase" placeholder="Phase" value="${d.phase||''}"></div>
+    <div class="form-group-m"><label>Status 1</label><input id="fa-status1" placeholder="Status 1" value="${d.status1||''}"></div>
+    <div class="form-group-m"><label>Status 2</label><input id="fa-status2" placeholder="Status 2" value="${d.status2||''}"></div>
+    <div class="form-group-m"><label>Type</label><input id="fa-type_office" placeholder="Type" value="${d.type_office||''}"></div>
+    <div class="form-group-m"><label>Grade</label><select id="fa-grade"><option value="">—</option><option${d.grade==='A'?' selected':''}>A</option><option${d.grade==='B'?' selected':''}>B</option><option${d.grade==='C'?' selected':''}>C</option></select></div>
+    <div class="form-group-m"><label>Area 1</label><input id="fa-area1" placeholder="Area 1" value="${d.area1||''}"></div>
+    <div class="form-group-m"><label>Area 2</label><input id="fa-area2" placeholder="Area 2" value="${d.area2||''}"></div>
+    <div class="form-group-m full"><label>Sub-Area</label><input id="fa-subarea" placeholder="Sub-Area" value="${d.sub_area||''}"></div>
+    <div class="form-group-m"><label>Opening Year</label><input id="fa-opening_year" type="number" placeholder="2024" value="${d.opening_year||''}"></div>
+    <div class="form-group-m"><label>Quarter</label><select id="fa-quarter"><option value="">—</option><option${d.quarter==='Q1'?' selected':''}>Q1</option><option${d.quarter==='Q2'?' selected':''}>Q2</option><option${d.quarter==='Q3'?' selected':''}>Q3</option><option${d.quarter==='Q4'?' selected':''}>Q4</option></select></div>
+    <div class="form-group-m"><label>GLA (sq m)</label><input id="fa-gla" type="number" placeholder="0" value="${d.gla_sqm||''}"></div>
+    <div class="form-group-m"><label>Nr. Clădiri</label><input id="fa-nr_cladiri" type="number" placeholder="1" value="${d.nr_cladiri||''}"></div>
+    <div class="form-group-m"><label>Levels</label><input id="fa-levels" type="number" placeholder="0" value="${d.levels||''}"></div>
+    <div class="form-group-m full"><label>Tenants</label><input id="fa-tenants" placeholder="Tenants" value="${d.tenants||''}"></div>
+    <div class="form-group-m"><label>MIN to let (sq m)</label><input id="fa-min_let" type="number" placeholder="0" value="${d.min_let_sqm||''}"></div>
+    <div class="form-group-m"><label>MAX to let (sq m)</label><input id="fa-max_let" type="number" placeholder="0" value="${d.max_let_sqm||''}"></div>
+    <div class="form-group-m"><label>Vacancy</label><input id="fa-vacancy" placeholder="Vacancy %" value="${d.vacancy||''}"></div>
+    <div class="form-group-m"><label>Total Vacancy (sq m)</label><input id="fa-total_vacancy" type="number" placeholder="0" value="${d.total_vacancy_sqm||''}"></div>
+    <div class="form-group-m"><label>Asking Rent (€/sq m/mth)</label><input id="fa-asking_rent" type="number" placeholder="0" value="${d.asking_rent||''}"></div>
+    <div class="form-group-m"><label>Developer</label><input id="fa-developer" placeholder="Developer" value="${d.developer||''}"></div>
+    <div class="form-group-m"><label>Owner</label><input id="fa-owner" placeholder="Owner" value="${d.owner||''}"></div>
+    <div class="form-group-m"><label>Green Certificate</label><select id="fa-green_cert"><option value="">—</option><option${d.green_certificate==='LEED'?' selected':''}>LEED</option><option${d.green_certificate==='BREEAM'?' selected':''}>BREEAM</option><option${d.green_certificate==='WELL'?' selected':''}>WELL</option><option${d.green_certificate==='Da'?' selected':''}>Da</option><option${d.green_certificate==='Nu'?' selected':''}>Nu</option></select></div>
+    <div class="form-group-m full"><label>Comments</label><input id="fa-comments" placeholder="Comments" value="${d.comments||''}"></div>
+    <div class="form-group-m full"><label>Project Comments</label><input id="fa-project_comments" placeholder="Project Comments" value="${d.project_comments||''}"></div>
+    <div class="form-group-m full"><label>Leasing Comments</label><input id="fa-leasing_comments" placeholder="Leasing Comments" value="${d.leasing_comments||''}"></div>
+    `:''}
+  </div>\`;
 }
 
 function openAdd(dept){
@@ -596,10 +631,49 @@ function openEdit(id){
   updateOrase();
 }
 
+function getVal(id){const el=document.getElementById(id);return el?el.value:null;}
 function getFormData(){
   const judet=document.getElementById('fa-jud').value;
   const isBuc=judet==='București';
-  return{dept:document.getElementById('fa-dept').value,locatie:document.getElementById('fa-loc').value||'',judet,oras:document.getElementById('fa-oras').value,sector:isBuc?(document.getElementById('fa-sector').value||''):'',zona:isBuc?(document.getElementById('fa-zona').value||''):'',contact:document.getElementById('fa-contact').value||'',telefon:document.getElementById('fa-tel').value||'',email:document.getElementById('fa-email').value||'',verificat:document.getElementById('fa-verif').value||null,site_retail:document.getElementById('fa-site').checked,imobiliare:document.getElementById('fa-imob').checked,status:document.getElementById('fa-status').value,suprafata:parseFloat(document.getElementById('fa-sup').value)||null,chirie:parseFloat(document.getElementById('fa-chir').value)||null};
+  const dept=document.getElementById('fa-dept').value;
+  const base={dept,locatie:document.getElementById('fa-loc').value||'',judet,oras:document.getElementById('fa-oras').value,sector:isBuc?(document.getElementById('fa-sector').value||''):'',zona:isBuc?(document.getElementById('fa-zona').value||''):'',contact:document.getElementById('fa-contact').value||'',telefon:document.getElementById('fa-tel').value||'',email:document.getElementById('fa-email').value||'',verificat:document.getElementById('fa-verif').value||null,site_retail:document.getElementById('fa-site').checked,imobiliare:document.getElementById('fa-imob').checked,status:document.getElementById('fa-status').value,suprafata:parseFloat(document.getElementById('fa-sup').value)||null,chirie:parseFloat(document.getElementById('fa-chir').value)||null};
+  if(dept==='Office'){
+    Object.assign(base,{
+      broker_responsabil:getVal('fa-broker_resp'),
+      action_office:getVal('fa-action'),
+      acord_gdpr:getVal('fa-gdpr'),
+      district:getVal('fa-district'),
+      fee_luni:parseFloat(getVal('fa-fee_luni'))||null,
+      fee_contract_start:getVal('fa-fee_start')||null,
+      fee_contract_end:getVal('fa-fee_end')||null,
+      phase:getVal('fa-phase'),
+      status1:getVal('fa-status1'),
+      status2:getVal('fa-status2'),
+      type_office:getVal('fa-type_office'),
+      grade:getVal('fa-grade'),
+      area1:getVal('fa-area1'),
+      area2:getVal('fa-area2'),
+      sub_area:getVal('fa-subarea'),
+      opening_year:parseInt(getVal('fa-opening_year'))||null,
+      quarter:getVal('fa-quarter'),
+      gla_sqm:parseFloat(getVal('fa-gla'))||null,
+      nr_cladiri:parseInt(getVal('fa-nr_cladiri'))||null,
+      levels:parseInt(getVal('fa-levels'))||null,
+      tenants:getVal('fa-tenants'),
+      min_let_sqm:parseFloat(getVal('fa-min_let'))||null,
+      max_let_sqm:parseFloat(getVal('fa-max_let'))||null,
+      vacancy:getVal('fa-vacancy'),
+      total_vacancy_sqm:parseFloat(getVal('fa-total_vacancy'))||null,
+      asking_rent:parseFloat(getVal('fa-asking_rent'))||null,
+      developer:getVal('fa-developer'),
+      owner:getVal('fa-owner'),
+      green_certificate:getVal('fa-green_cert'),
+      comments:getVal('fa-comments'),
+      project_comments:getVal('fa-project_comments'),
+      leasing_comments:getVal('fa-leasing_comments')
+    });
+  }
+  return base;
 }
 
 async function saveAdd(){
