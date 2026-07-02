@@ -319,7 +319,7 @@ function showApp(){
 async function doLogout(){await sb.auth.signOut();location.reload();}
 
 async function loadAllData(){
-  const {data,error}=await sb.from('proprietati').select('*').is('deleted_at',null).order('created_at',{ascending:false});
+  const {data,error}=await sb.from('proprietati').select('*').filter('deleted_at','is',null).order('created_at',{ascending:false});
   if(!error&&data){allData=data;refreshAll();}
 }
 
@@ -647,7 +647,7 @@ function nav(p){
 }
 
 async function loadCos(tbId,dept){
-  let query=sb.from('proprietati').select('*').not('deleted_at','is',null).order('deleted_at',{ascending:false});
+  let query=sb.from('proprietati').select('*').neq('deleted_at',null).order('deleted_at',{ascending:false});
   if(dept)query=query.eq('dept',dept);
   const{data,error}=await query;
   const tb=document.getElementById(tbId);
