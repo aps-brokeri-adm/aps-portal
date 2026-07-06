@@ -476,9 +476,9 @@ function applyFilters(key, dept) {
       '<td>' + badgeYN(r.site_retail) + '</td><td>' + badgeYN(r.imobiliare) + '</td>' +
       '<td>' + badgeStatus(r.status || 'Disponibil') + '</td>' +
       '<td onclick="event.stopPropagation()">' +
-      (dept === 'Office' ? '<button class="btn-sm" style="color:#185FA5" onclick="event.stopPropagation();openDetails(\x22' + r.id + '\x22)">👁️</button> ' : '') +
-      '<button class="btn-sm btn-edit" onclick="openEdit(\x22' + r.id + '\x22)">✏️</button> ' +
-      '<button class="btn-sm btn-del" onclick="delRow(\x22' + r.id + '\x22)">🗑️</button>' +
+      (dept === 'Office' ? '<button class="btn-sm" style="color:#185FA5" onclick="event.stopPropagation();openDetails(\'' + r.id + '\')">👁️</button> ' : '') +
+      '<button class="btn-sm btn-edit" onclick="openEdit(\'' + r.id + '\')">✏️</button> ' +
+      '<button class="btn-sm btn-del" onclick="delRow(\'' + r.id + '\')">🗑️</button>' +
       '</td></tr>';
   }).join('');
 }
@@ -951,7 +951,7 @@ function openDetails(id) {
     '</div>' +
     '<div class="modal-footer-btns">' +
     '<button class="btn-cancel" onclick="closeModal()">Închide</button>' +
-    '<button class="btn-save" onclick="closeModal();openEdit(\x27' + r.id + '\x27)">✏️ Editează</button>' +
+    '<button class="btn-save" onclick="closeModal();openEdit(\'' + r.id + '\')">✏️ Editează</button>' +
     '</div>';
   document.getElementById('modal-overlay').classList.add('open');
 }
