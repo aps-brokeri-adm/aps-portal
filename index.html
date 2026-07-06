@@ -408,8 +408,7 @@ function renderDept(dept) {
   var rows = allData.filter(function(r) { return r.dept === dept; });
   var colors = {'Retail':'#856404','Office':'#004085','Industrial':'#4a5568','Rezidențial':'#155724'};
   var color = colors[dept] || '#333';
-  var extraCols = dept === 'Office' ? '<th>Grade</th><th>GLA</th><th>Developer</th><th>Green Cert.</th>' : '';
-  var extraHead = dept === 'Office' ? '<th>Grade</th><th>GLA</th><th>Developer</th><th>Green Cert.</th>' : '';
+
 
   p.innerHTML = '<div class="stats-row">' +
     '<div class="stat-card"><div class="stat-label">Total</div><div class="stat-val">' + rows.length + '</div></div>' +
@@ -433,7 +432,7 @@ function renderDept(dept) {
     '</div>' +
     '<div class="tbl-scroll"><table><thead><tr>' +
     '<th>Locație</th><th>Județ</th><th>Sector/Zonă</th><th>Contact</th><th>Telefon</th><th>Email</th>' +
-    (dept === 'Office' ? '<th>Grade</th><th>GLA</th><th>Developer</th><th>Green Cert.</th>' : '') +
+    (dept === 'Office' ? '<th>Grade</th><th>GLA (mp)</th><th>Vacancy</th><th>Asking Rent</th><th>Developer</th><th>Green Cert.</th>' : '') +
     '<th>Verificat</th><th>Zile</th><th>Site</th><th>Imob.</th><th>Status</th><th>Acțiuni</th>' +
     '</tr></thead><tbody id="tbody-' + key + '"></tbody></table></div></div>';
   applyFilters(key, dept);
@@ -461,6 +460,8 @@ function applyFilters(key, dept) {
     var officeExtra = dept === 'Office' ?
       '<td>' + (r.grade || '—') + '</td>' +
       '<td>' + (r.gla_sqm || '—') + '</td>' +
+      '<td>' + (r.vacancy || '—') + '</td>' +
+      '<td>' + (r.asking_rent ? r.asking_rent + ' €' : '—') + '</td>' +
       '<td>' + (r.developer || '—') + '</td>' +
       '<td>' + (r.green_certificate || '—') + '</td>' : '';
     return '<tr class="' + rowClass + '" onclick="openEdit(\'' + r.id + '\')">' +
@@ -475,8 +476,9 @@ function applyFilters(key, dept) {
       '<td>' + badgeYN(r.site_retail) + '</td><td>' + badgeYN(r.imobiliare) + '</td>' +
       '<td>' + badgeStatus(r.status || 'Disponibil') + '</td>' +
       '<td onclick="event.stopPropagation()">' +
-      '<button class="btn-sm btn-edit" onclick="openEdit(\'' + r.id + '\')">✏️</button> ' +
-      '<button class="btn-sm btn-del" onclick="delRow(\'' + r.id + '\')">🗑️</button>' +
+      (dept === 'Office' ? '<button class="btn-sm" style="color:#185FA5" onclick="event.stopPropagation();openDetails(\x22' + r.id + '\x22)">👁️</button> ' : '') +
+      '<button class="btn-sm btn-edit" onclick="openEdit(\x22' + r.id + '\x22)">✏️</button> ' +
+      '<button class="btn-sm btn-del" onclick="delRow(\x22' + r.id + '\x22)">🗑️</button>' +
       '</td></tr>';
   }).join('');
 }
@@ -898,6 +900,62 @@ function exportToExcel(rows, name) {
 }
 
 // ── NAV ──
+function openDetails(id) {
+  var r = allData.find(function(x) { return x.id === id; });
+  if (!r) return;
+  function row(label, val) {
+    if (!val) return '';
+    return '<div class="raport-item"><span style="color:var(--muted);font-size:11px">' + label + '</span><span style="font-weight:500">' + val + '</span></div>';
+  }
+  document.getElementById('modal-box').innerHTML =
+    '<div class="modal-title"><div class="modal-accent"></div> 👁️ Detalii Office — ' + (r.locatie || r.dept) + '</div>' +
+    '<div class="raport-card"><h4>📋 General</h4>' +
+    row('Broker Responsabil', r.broker_responsabil) +
+    row('Action', r.action_office) +
+    row('Acord GDPR', r.acord_gdpr) +
+    row('District', r.district) +
+    row('Phase', r.phase) +
+    row('Status 1', r.status1) +
+    row('Status 2', r.status2) +
+    row('Type', r.type_office) +
+    row('Grade', r.grade) +
+    row('Area 1', r.area1) +
+    row('Area 2', r.area2) +
+    row('Sub-Area', r.sub_area) +
+    row('Opening Year', r.opening_year) +
+    row('Quarter', r.quarter) +
+    '</div>' +
+    '<div class="raport-card"><h4>🏢 Tehnic</h4>' +
+    row('GLA (sq m)', r.gla_sqm) +
+    row('Nr. Clădiri', r.nr_cladiri) +
+    row('Levels', r.levels) +
+    row('Tenants', r.tenants) +
+    row('MIN to let (sq m)', r.min_let_sqm) +
+    row('MAX to let (sq m)', r.max_let_sqm) +
+    row('Vacancy', r.vacancy) +
+    row('Total Vacancy (sq m)', r.total_vacancy_sqm) +
+    row('Asking Rent (€/sq m/mth)', r.asking_rent) +
+    row('Developer', r.developer) +
+    row('Owner', r.owner) +
+    row('Green Certificate', r.green_certificate) +
+    '</div>' +
+    '<div class="raport-card"><h4>💰 FEE</h4>' +
+    row('FEE nr. luni', r.fee_luni) +
+    row('FEE Contract Start', r.fee_contract_start) +
+    row('FEE Contract End', r.fee_contract_end) +
+    '</div>' +
+    '<div class="raport-card"><h4>💬 Comentarii</h4>' +
+    row('Comments', r.comments) +
+    row('Project Comments', r.project_comments) +
+    row('Leasing Comments', r.leasing_comments) +
+    '</div>' +
+    '<div class="modal-footer-btns">' +
+    '<button class="btn-cancel" onclick="closeModal()">Închide</button>' +
+    '<button class="btn-save" onclick="closeModal();openEdit(\x27' + r.id + '\x27)">✏️ Editează</button>' +
+    '</div>';
+  document.getElementById('modal-overlay').classList.add('open');
+}
+
 function closeModal() { document.getElementById('modal-overlay').classList.remove('open'); }
 
 var PAGE_TITLES = {home:'Dashboard',raport:'Rapoarte',retail:'Retail',office:'Office',industrial:'Industrial',rezidential:'Rezidențial',admin:'Admin Portal',cos:'Coș de gunoi',istoric:'Istoric modificări'};
