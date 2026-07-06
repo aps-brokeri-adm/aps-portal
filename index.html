@@ -193,6 +193,7 @@ tr.row-danger td{background:#fff5f5}
     <div class="sb-item" onclick="nav('admin')" id="nav-admin">⚙️ Admin Portal</div>
     <div class="sb-item" onclick="nav('cos')" id="nav-cos">🗑️ Coș de gunoi</div>
     <div class="sb-item" onclick="nav('istoric')" id="nav-istoric">📝 Istoric modificări</div>
+    <div class="sb-item" onclick="nav('brokeri')" id="nav-brokeri">👥 Gestionare Brokeri</div>
   </div>
   <div class="sb-bottom"><button class="btn-logout" onclick="doLogout()">🚪 Deconectare</button></div>
 </div>
@@ -244,6 +245,19 @@ tr.row-danger td{background:#fff5f5}
         <div class="tbl-scroll"><table>
           <thead><tr><th>Dept</th><th>Locație</th><th>Județ</th><th>Contact</th><th>Telefon</th><th>Email</th><th>Verificat</th><th>Zile</th><th>Site</th><th>Imob.</th><th>Status</th><th>Acțiuni</th></tr></thead>
           <tbody id="admin-body"></tbody>
+        </table></div>
+      </div>
+    </div>
+
+    <div class="page" id="page-brokeri">
+      <div style="display:flex;gap:10px;margin-bottom:18px">
+        <button class="btn-primary" onclick="openAddBroker()">+ Adaugă broker nou</button>
+      </div>
+      <div class="tbl-wrap">
+        <div class="tbl-head"><div class="tbl-head-title">👥 Brokeri înregistrați</div></div>
+        <div class="tbl-scroll"><table>
+          <thead><tr><th>Nume</th><th>Email</th><th>Departament</th><th>Creat la</th><th>Acțiuni</th></tr></thead>
+          <tbody id="brokeri-body"><tr><td colspan="5" class="empty-state">Se încarcă...</td></tr></tbody>
         </table></div>
       </div>
     </div>
@@ -958,7 +972,7 @@ function openDetails(id) {
 
 function closeModal() { document.getElementById('modal-overlay').classList.remove('open'); }
 
-var PAGE_TITLES = {home:'Dashboard',raport:'Rapoarte',retail:'Retail',office:'Office',industrial:'Industrial',rezidential:'Rezidențial',admin:'Admin Portal',cos:'Coș de gunoi',istoric:'Istoric modificări'};
+var PAGE_TITLES = {home:'Dashboard',raport:'Rapoarte',retail:'Retail',office:'Office',industrial:'Industrial',rezidential:'Rezidențial',admin:'Admin Portal',cos:'Coș de gunoi',brokeri:'Gestionare Brokeri',istoric:'Istoric modificări'};
 
 function nav(p) {
   document.querySelectorAll('.page').forEach(function(el) { el.classList.remove('active'); });
@@ -970,6 +984,7 @@ function nav(p) {
   document.getElementById('topbar-title').textContent = PAGE_TITLES[p] || p;
   if (p === 'raport') renderRaport();
   if (p === 'cos') loadCos();
+  if (p === 'brokeri') loadBrokeri();
   if (p === 'istoric') loadIstoric();
 }
 
@@ -989,6 +1004,73 @@ function closeReminder() {
 }
 
 // ── TOAST ──
+async function loadBrokeri() {
+  var res = await sb.from('user_roles').select('*').order('created_at', {ascending: false});
+  var tb = document.getElementById('brokeri-body');
+  if (!tb) return;
+  if (!res.data || !res.data.length) { tb.innerHTML = '<tr><td colspan="5" class="empty-state">Niciun broker înregistrat.</td></tr>'; return; }
+  var deptColors = {'admin':'b-red','retail':'b-yellow','office':'b-navy','industrial':'b-gray','rezidential':'b-green'};
+  tb.innerHTML = res.data.map(function(r) {
+    return '<tr>' +
+      '<td><b>' + (r.nume || '—') + '</b></td>' +
+      '<td>' + (r.email || '—') + '</td>' +
+      '<td><span class="badge ' + (deptColors[r.role] || 'b-gray') + '">' + r.role.charAt(0).toUpperCase() + r.role.slice(1) + '</span></td>' +
+      '<td style="font-size:11px;color:var(--muted)">' + new Date(r.created_at).toLocaleDateString('ro-RO') + '</td>' +
+      '<td>' +
+      '<button class="btn-sm btn-edit" onclick="resetBrokerPass(\'' + r.email + '\')">🔑 Resetează parola</button> ' +
+      '<button class="btn-sm btn-del" onclick="deleteBroker(\'' + r.id + '\',\'' + r.user_id + '\')">🗑️ Șterge</button>' +
+      '</td></tr>';
+  }).join('');
+}
+
+function openAddBroker() {
+  document.getElementById('modal-box').innerHTML =
+    '<div class="modal-title"><div class="modal-accent"></div> + Adaugă broker nou</div>' +
+    '<div class="form-grid">' +
+    '<div class="form-group-m"><label>Nume complet</label><input id="br-nume" placeholder="Ion Popescu"></div>' +
+    '<div class="form-group-m"><label>Departament *</label><select id="br-role"><option value="retail">Retail</option><option value="office">Office</option><option value="industrial">Industrial</option><option value="rezidential">Rezidențial</option><option value="admin">Admin</option></select></div>' +
+    '<div class="form-group-m full"><label>Email *</label><input id="br-email" type="email" placeholder="broker@aps.ro"></div>' +
+    '<div class="form-group-m full"><label>Parolă *</label><input id="br-pass" type="password" placeholder="Minim 6 caractere"></div>' +
+    '</div>' +
+    '<div id="br-msg" style="margin-top:10px;font-size:12px;display:none"></div>' +
+    '<div class="modal-footer-btns"><button class="btn-cancel" onclick="closeModal()">Anulează</button><button class="btn-save" onclick="saveBroker()">Creează cont</button></div>';
+  document.getElementById('modal-overlay').classList.add('open');
+}
+
+async function saveBroker() {
+  var email = document.getElementById('br-email').value.trim();
+  var pass = document.getElementById('br-pass').value;
+  var nume = document.getElementById('br-nume').value.trim();
+  var role = document.getElementById('br-role').value;
+  var msg = document.getElementById('br-msg');
+  if (!email || !pass) { msg.style.display='block'; msg.style.color='var(--red)'; msg.textContent='Email și parola sunt obligatorii.'; return; }
+  if (pass.length < 6) { msg.style.display='block'; msg.style.color='var(--red)'; msg.textContent='Parola trebuie să aibă minim 6 caractere.'; return; }
+  msg.style.display='block'; msg.style.color='var(--muted)'; msg.textContent='Se creează contul...';
+  var res = await sb.auth.signUp({email: email, password: pass});
+  if (res.error) { msg.style.color='var(--red)'; msg.textContent='Eroare: ' + res.error.message; return; }
+  var userId = res.data.user ? res.data.user.id : null;
+  if (!userId) { msg.style.color='var(--red)'; msg.textContent='Eroare la crearea contului.'; return; }
+  var roleRes = await sb.from('user_roles').insert([{user_id: userId, role: role, nume: nume, email: email}]);
+  if (roleRes.error) { msg.style.color='var(--red)'; msg.textContent='Cont creat dar eroare la rol: ' + roleRes.error.message; return; }
+  closeModal();
+  showToast('Broker ' + (nume || email) + ' creat cu succes! ✅');
+  loadBrokeri();
+}
+
+async function resetBrokerPass(email) {
+  if (!confirm('Trimiți email de resetare parolă către ' + email + '?')) return;
+  var res = await sb.auth.resetPasswordForEmail(email, {redirectTo: 'https://aps-brokeri-adm.github.io/aps-portal'});
+  if (!res.error) showToast('Email de resetare trimis către ' + email + '! ✅');
+  else showToast('Eroare: ' + res.error.message);
+}
+
+async function deleteBroker(roleId, userId) {
+  if (!confirm('Ștergi acest broker? Acțiunea nu poate fi anulată!')) return;
+  var res = await sb.from('user_roles').delete().eq('id', roleId);
+  if (!res.error) { showToast('Broker șters! ✅'); loadBrokeri(); }
+  else showToast('Eroare: ' + res.error.message);
+}
+
 function showToast(msg) {
   var t = document.getElementById('toast');
   t.textContent = msg; t.classList.add('show');
