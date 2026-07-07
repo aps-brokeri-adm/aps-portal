@@ -1010,6 +1010,7 @@ async function loadBrokeri() {
   if (!tb) return;
   if (!res.data || !res.data.length) { tb.innerHTML = '<tr><td colspan="5" class="empty-state">Niciun broker înregistrat.</td></tr>'; return; }
   var deptColors = {'admin':'b-red','retail':'b-yellow','office':'b-navy','industrial':'b-gray','rezidential':'b-green'};
+  // We'll show email confirmation status
   tb.innerHTML = res.data.map(function(r) {
     return '<tr>' +
       '<td><b>' + (r.nume || '—') + '</b></td>' +
@@ -1026,14 +1027,17 @@ async function loadBrokeri() {
 function openAddBroker() {
   document.getElementById('modal-box').innerHTML =
     '<div class="modal-title"><div class="modal-accent"></div> + Adaugă broker nou</div>' +
+    '<div style="background:#EBF8FF;border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:12px;color:#004085">' +
+    '📧 Brokerul va primi un email de confirmare la adresa introdusă. Trebuie să confirme emailul înainte de a se putea loga.' +
+    '</div>' +
     '<div class="form-grid">' +
     '<div class="form-group-m"><label>Nume complet</label><input id="br-nume" placeholder="Ion Popescu"></div>' +
     '<div class="form-group-m"><label>Departament *</label><select id="br-role"><option value="retail">Retail</option><option value="office">Office</option><option value="industrial">Industrial</option><option value="rezidential">Rezidențial</option><option value="admin">Admin</option></select></div>' +
     '<div class="form-group-m full"><label>Email *</label><input id="br-email" type="email" placeholder="broker@aps.ro"></div>' +
-    '<div class="form-group-m full"><label>Parolă *</label><input id="br-pass" type="password" placeholder="Minim 6 caractere"></div>' +
+    '<div class="form-group-m full"><label>Parolă temporară *</label><input id="br-pass" type="password" placeholder="Minim 6 caractere — brokerul o poate schimba ulterior"></div>' +
     '</div>' +
     '<div id="br-msg" style="margin-top:10px;font-size:12px;display:none"></div>' +
-    '<div class="modal-footer-btns"><button class="btn-cancel" onclick="closeModal()">Anulează</button><button class="btn-save" onclick="saveBroker()">Creează cont</button></div>';
+    '<div class="modal-footer-btns"><button class="btn-cancel" onclick="closeModal()">Anulează</button><button class="btn-save" onclick="saveBroker()">Creează cont și trimite email</button></div>';
   document.getElementById('modal-overlay').classList.add('open');
 }
 
@@ -1043,17 +1047,37 @@ async function saveBroker() {
   var nume = document.getElementById('br-nume').value.trim();
   var role = document.getElementById('br-role').value;
   var msg = document.getElementById('br-msg');
-  if (!email || !pass) { msg.style.display='block'; msg.style.color='var(--red)'; msg.textContent='Email și parola sunt obligatorii.'; return; }
-  if (pass.length < 6) { msg.style.display='block'; msg.style.color='var(--red)'; msg.textContent='Parola trebuie să aibă minim 6 caractere.'; return; }
+  if (!email) { msg.style.display='block'; msg.style.color='var(--red)'; msg.textContent='Emailul este obligatoriu.'; return; }
+  if (!pass || pass.length < 6) { msg.style.display='block'; msg.style.color='var(--red)'; msg.textContent='Parola trebuie să aibă minim 6 caractere.'; return; }
   msg.style.display='block'; msg.style.color='var(--muted)'; msg.textContent='Se creează contul...';
-  var res = await sb.auth.signUp({email: email, password: pass});
+  
+  // Create user with signUp
+  var res = await sb.auth.signUp({
+    email: email, 
+    password: pass,
+    options: {
+      emailRedirectTo: 'https://aps-brokeri-adm.github.io/aps-portal',
+      data: { nume: nume, role: role }
+    }
+  });
+  
   if (res.error) { msg.style.color='var(--red)'; msg.textContent='Eroare: ' + res.error.message; return; }
+  
   var userId = res.data.user ? res.data.user.id : null;
   if (!userId) { msg.style.color='var(--red)'; msg.textContent='Eroare la crearea contului.'; return; }
+  
+  // Add role
   var roleRes = await sb.from('user_roles').insert([{user_id: userId, role: role, nume: nume, email: email}]);
   if (roleRes.error) { msg.style.color='var(--red)'; msg.textContent='Cont creat dar eroare la rol: ' + roleRes.error.message; return; }
+  
+  // Check if email confirmation needed
+  var needsConfirm = res.data.user && !res.data.user.email_confirmed_at;
   closeModal();
-  showToast('Broker ' + (nume || email) + ' creat cu succes! ✅');
+  if (needsConfirm) {
+    showToast('✅ Broker creat! ' + (nume || email) + ' trebuie să confirme emailul.');
+  } else {
+    showToast('✅ Broker ' + (nume || email) + ' creat cu succes!');
+  }
   loadBrokeri();
 }
 
