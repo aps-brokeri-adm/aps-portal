@@ -473,6 +473,7 @@ function renderDept(dept) {
     '</div>' +
     '<div class="tbl-scroll"><table><thead><tr>' +
     '<th>Locație</th><th>Județ</th><th>Sector/Zonă</th><th>Contact</th><th>Telefon</th><th>Email</th>' +
+    (dept === 'Retail' ? '<th>Zonă</th><th>Suprafață (mp)</th><th>Chirie & Condiții</th><th>Proprietar</th><th>Broker</th>' : '') +
     (dept === 'Office' ? '<th>Grade</th><th>GLA (mp)</th><th>Vacancy</th><th>Asking Rent</th><th>Developer</th><th>Green Cert.</th>' : '') +
     '<th>Verificat</th><th>Zile</th><th>Site</th><th>Imob.</th><th>Status</th><th>Acțiuni</th>' +
     '</tr></thead><tbody id="tbody-' + key + '"></tbody></table></div></div>';
@@ -503,6 +504,13 @@ function applyFilters(key, dept) {
     var zi = zileUpdate(r.verificat);
     var loc = r.judet === 'București' ? ((r.sector || '') + ' — ' + (r.zona || '')) : (r.oras || '');
     var rowClass = zi > 30 ? 'clickable row-danger' : 'clickable';
+    var retailTableExtra = dept === 'Retail' ?
+      '<td>' + (r.zona_oras || '—') + '</td>' +
+      '<td>' + (r.suprafata_min || '—') + (r.suprafata_max ? ' - ' + r.suprafata_max : '') + ' mp</td>' +
+      '<td>' + (r.chirie_conditii || '—') + '</td>' +
+      '<td>' + (r.proprietar || '—') + '</td>' +
+      '<td>' + (r.broker_elena ? '✅ Elena' : '') + (r.broker_vlada ? ' ✅ Vlada' : '') + '</td>' : '';
+
     var officeExtra = dept === 'Office' ?
       '<td>' + (r.grade || '—') + '</td>' +
       '<td>' + (r.gla_sqm || '—') + '</td>' +
@@ -516,6 +524,7 @@ function applyFilters(key, dept) {
       '<td>' + (r.contact || '—') + '</td>' +
       '<td><span class="copy-btn" onclick="event.stopPropagation();copyText(\'' + (r.telefon || '') + '\')">' + (r.telefon || '—') + '</span></td>' +
       '<td><span class="copy-btn" onclick="event.stopPropagation();copyText(\'' + (r.email || '') + '\')">' + (r.email || '—') + '</span></td>' +
+      retailTableExtra +
       officeExtra +
       '<td>' + (r.verificat || '—') + '</td>' +
       '<td class="' + zileClass(zi) + '">' + (zi < 999 ? zi + 'z' : '—') + '</td>' +
@@ -734,6 +743,23 @@ function buildFormHTML(d, dept) {
     return '<option' + ((d.dept || dept || 'Retail') === dd ? ' selected' : '') + '>' + dd + '</option>';
   }).join('');
 
+  var retailExtra = dept === 'Retail' ? (
+    '<div class="form-grid" style="margin-top:12px">' +
+    '<div class="section-title-form">Câmpuri Retail</div>' +
+    '<div class="form-group-m"><label>Zonă / Cartier</label><input id="fa-zona_oras" placeholder="Ex: Floreasca, Centru" value="' + (d.zona_oras||'') + '"></div>' +
+    '<div class="form-group-m"><label>Proprietar</label><input id="fa-proprietar" placeholder="Companie sau persoană fizică" value="' + (d.proprietar||'') + '"></div>' +
+    '<div class="form-group-m"><label>Persoană decizie & Telefon</label><input id="fa-persoana_decizie" placeholder="Nume + telefon" value="' + (d.persoana_decizie||'') + '"></div>' +
+    '<div class="form-group-m"><label>Suprafață MIN (mp)</label><input id="fa-sup_min" type="number" placeholder="0" value="' + (d.suprafata_min||'') + '"></div>' +
+    '<div class="form-group-m"><label>Suprafață MAX (mp)</label><input id="fa-sup_max" type="number" placeholder="0" value="' + (d.suprafata_max||'') + '"></div>' +
+    '<div class="form-group-m full"><label>Chirie & Condiții</label><input id="fa-chirie_cond" placeholder="Ex: 1000 EUR/lună, TVA inclus" value="' + (d.chirie_conditii||'') + '"></div>' +
+    '<div class="form-group-m full"><label>Actualizare recentă & Info relevante</label><input id="fa-actualizare" placeholder="Info actualizare" value="' + (d.actualizare_recenta||'') + '"></div>' +
+    '<div class="form-group-m full"><label>Link Prezentare</label><input id="fa-link_prez" placeholder="https://..." value="' + (d.link_prezentare||'') + '"></div>' +
+    '<div class="toggle-row"><span class="toggle-label">Filmulet postat</span><label class="toggle"><input type="checkbox" id="fa-filmulet"' + (d.filmulet_postat?' checked':'') + '><span class="tog-sl"></span></label></div>' +
+    '<div class="toggle-row"><span class="toggle-label">Broker Elena</span><label class="toggle"><input type="checkbox" id="fa-elena"' + (d.broker_elena?' checked':'') + '><span class="tog-sl"></span></label></div>' +
+    '<div class="toggle-row"><span class="toggle-label">Broker Vlada</span><label class="toggle"><input type="checkbox" id="fa-vlada"' + (d.broker_vlada?' checked':'') + '><span class="tog-sl"></span></label></div>' +
+    '</div>'
+  ) : '';
+
   var baseFields = '<div class="form-grid">' +
     '<div class="form-group-m"><label>Departament *</label><select id="fa-dept" onchange="onDeptChange()">' + deptOpts + '</select></div>' +
     '<div class="form-group-m"><label>Status *</label><select id="fa-status"><option' + ((d.status||'Disponibil')==='Disponibil'?' selected':'') + '>Disponibil</option><option' + (d.status==='Închiriat'?' selected':'') + '>Închiriat</option></select></div>' +
@@ -754,7 +780,7 @@ function buildFormHTML(d, dept) {
     '<div class="toggle-row"><span class="toggle-label">Promovat pe Imobiliare.ro</span><label class="toggle"><input type="checkbox" id="fa-imob"' + (d.imobiliare?' checked':'') + '><span class="tog-sl"></span></label></div>' +
     '</div>' +
     '<div id="office-extra-fields" style="display:' + ((d.dept||dept)==='Office'?'block':'none') + '">' + buildOfficeFields(d) + '</div>';
-  return baseFields;
+  return baseFields + '<div id="retail-extra-fields" style="display:' + ((d.dept||dept)==='Retail'?'block':'none') + '">' + (dept==='Retail'||d.dept==='Retail' ? retailExtra : '') + '</div>';
 }
 
 function buildOfficeFields(d) {
@@ -797,8 +823,33 @@ function buildOfficeFields(d) {
 
 function onDeptChange() {
   var dept = gv('fa-dept');
-  var extra = document.getElementById('office-extra-fields');
-  if (extra) extra.style.display = dept === 'Office' ? 'block' : 'none';
+  var officeExtra = document.getElementById('office-extra-fields');
+  if (officeExtra) officeExtra.style.display = dept === 'Office' ? 'block' : 'none';
+  var retailExtraDiv = document.getElementById('retail-extra-fields');
+  if (retailExtraDiv) {
+    if (dept === 'Retail' && !retailExtraDiv.innerHTML.trim()) {
+      // Need to rebuild retail fields
+      retailExtraDiv.innerHTML = buildRetailFields({});
+    }
+    retailExtraDiv.style.display = dept === 'Retail' ? 'block' : 'none';
+  }
+}
+
+function buildRetailFields(d) {
+  return '<div class="form-grid" style="margin-top:12px">' +
+    '<div class="section-title-form">Câmpuri Retail</div>' +
+    '<div class="form-group-m"><label>Zonă / Cartier</label><input id="fa-zona_oras" placeholder="Ex: Floreasca, Centru" value="' + (d.zona_oras||'') + '"></div>' +
+    '<div class="form-group-m"><label>Proprietar</label><input id="fa-proprietar" placeholder="Companie sau persoană fizică" value="' + (d.proprietar||'') + '"></div>' +
+    '<div class="form-group-m"><label>Persoană decizie & Telefon</label><input id="fa-persoana_decizie" placeholder="Nume + telefon" value="' + (d.persoana_decizie||'') + '"></div>' +
+    '<div class="form-group-m"><label>Suprafață MIN (mp)</label><input id="fa-sup_min" type="number" placeholder="0" value="' + (d.suprafata_min||'') + '"></div>' +
+    '<div class="form-group-m"><label>Suprafață MAX (mp)</label><input id="fa-sup_max" type="number" placeholder="0" value="' + (d.suprafata_max||'') + '"></div>' +
+    '<div class="form-group-m full"><label>Chirie & Condiții</label><input id="fa-chirie_cond" placeholder="Ex: 1000 EUR/lună, TVA inclus" value="' + (d.chirie_conditii||'') + '"></div>' +
+    '<div class="form-group-m full"><label>Actualizare recentă & Info relevante</label><input id="fa-actualizare" placeholder="Info actualizare" value="' + (d.actualizare_recenta||'') + '"></div>' +
+    '<div class="form-group-m full"><label>Link Prezentare</label><input id="fa-link_prez" placeholder="https://..." value="' + (d.link_prezentare||'') + '"></div>' +
+    '<div class="toggle-row"><span class="toggle-label">Filmulet postat</span><label class="toggle"><input type="checkbox" id="fa-filmulet"' + (d.filmulet_postat?' checked':'') + '><span class="tog-sl"></span></label></div>' +
+    '<div class="toggle-row"><span class="toggle-label">Broker Elena</span><label class="toggle"><input type="checkbox" id="fa-elena"' + (d.broker_elena?' checked':'') + '><span class="tog-sl"></span></label></div>' +
+    '<div class="toggle-row"><span class="toggle-label">Broker Vlada</span><label class="toggle"><input type="checkbox" id="fa-vlada"' + (d.broker_vlada?' checked':'') + '><span class="tog-sl"></span></label></div>' +
+    '</div>';
 }
 
 function openAdd(dept) {
@@ -837,6 +888,19 @@ function getFormData() {
     suprafata: parseFloat(gv('fa-sup')) || null,
     chirie: parseFloat(gv('fa-chir')) || null
   };
+  if (dept === 'Retail') {
+    base.zona_oras = gv('fa-zona_oras');
+    base.proprietar = gv('fa-proprietar');
+    base.persoana_decizie = gv('fa-persoana_decizie');
+    base.suprafata_min = parseFloat(gv('fa-sup_min')) || null;
+    base.suprafata_max = parseFloat(gv('fa-sup_max')) || null;
+    base.chirie_conditii = gv('fa-chirie_cond');
+    base.actualizare_recenta = gv('fa-actualizare');
+    base.link_prezentare = gv('fa-link_prez');
+    base.filmulet_postat = gc('fa-filmulet');
+    base.broker_elena = gc('fa-elena');
+    base.broker_vlada = gc('fa-vlada');
+  }
   if (dept === 'Office') {
     base.broker_responsabil = gv('fa-broker_resp');
     base.action_office = gv('fa-action');
@@ -943,8 +1007,10 @@ async function handleImport(input) {
       rows = XLSX.utils.sheet_to_json(ws);
     }
     var toInsert = rows.map(function(r) {
-      return {
-        dept: r['Departament'] || r['dept'] || 'Retail',
+      var dept = r['Departament'] || r['dept'] || 'Retail';
+      var isRetail = dept === 'Retail';
+      var obj = {
+        dept: dept,
         locatie: r['Locatie'] || r['locatie'] || '',
         judet: r['Judet'] || r['judet'] || 'București',
         oras: r['Oras'] || r['oras'] || '',
@@ -957,9 +1023,27 @@ async function handleImport(input) {
         site_retail: ['da','yes','1','true'].indexOf(String(r['Site_Retail'] || r['Site Retail'] || '').toLowerCase()) >= 0,
         imobiliare: ['da','yes','1','true'].indexOf(String(r['Imobiliare'] || '').toLowerCase()) >= 0,
         status: r['Status'] || 'Disponibil',
-        suprafata: parseFloat(r['Suprafata'] || r['suprafata']) || null,
+        suprafata: parseFloat(r['Suprafata'] || r['suprafata'] || r['Suprafata Minim m2'] || r['Suprafata Minim']) || null,
         chirie: parseFloat(r['Chirie'] || r['chirie']) || null
       };
+      if (isRetail) {
+        obj.zona_oras = r['ZONA / ORAS'] || r['Zona'] || r['zona_oras'] || '';
+        obj.proprietar = r['Proprietar (companie sau nume pers fizica)'] || r['Proprietar'] || '';
+        obj.persoana_decizie = r['Persoana Decizie si Telefon'] || r['Persoana Decizie'] || '';
+        obj.suprafata_min = parseFloat(r['Suprafata Minim m2'] || r['Suprafata Minim'] || r['suprafata_min']) || null;
+        obj.suprafata_max = parseFloat(r['Suprafata Maxim m2'] || r['Suprafata Maxim'] || r['suprafata_max']) || null;
+        obj.chirie_conditii = r['Chirie si conditii Euro'] || r['Chirie conditii'] || r['chirie_conditii'] || '';
+        obj.actualizare_recenta = r['Actualizare recenta (si alte informatii relevante)'] || r['Actualizare recenta'] || '';
+        obj.link_prezentare = r['LINK PREZENTARE'] || r['Link Prezentare'] || '';
+        obj.site_retail = ['da','yes','1','true'].indexOf(String(r['Site Retail (da/nu)'] || r['Site Retail'] || r['site_retail'] || '').toLowerCase()) >= 0;
+        obj.imobiliare = ['da','yes','1','true'].indexOf(String(r['Imobiliare.ro (da/nu)'] || r['Imobiliare.ro'] || r['imobiliare'] || '').toLowerCase()) >= 0;
+        obj.filmulet_postat = ['da','yes','1','true'].indexOf(String(r['Filmulet postat (da/nu)'] || r['Filmulet'] || '').toLowerCase()) >= 0;
+        obj.broker_elena = !!(r['Elena'] && r['Elena'].toString().trim());
+        obj.broker_vlada = !!(r['Vlada'] && r['Vlada'].toString().trim());
+        obj.contact = r['Persoana Decizie si Telefon'] || r['Contact'] || '';
+        obj.verificat = r['Site Data Ultim Update'] || r['Data Verificare'] || r['verificat'] || null;
+      }
+      return obj;
     });
     var impRes = await sb.from('proprietati').insert(toInsert);
     if (!impRes.error) {
