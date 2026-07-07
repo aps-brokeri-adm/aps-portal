@@ -304,13 +304,36 @@ var currentRole = null;
 var allData = [];
 
 // ── AUTH ──
+var loginAttempts = 0;
+var loginBlocked = false;
+
 async function doLogin() {
+  if (loginBlocked) { 
+    var errEl = document.getElementById('login-error');
+    errEl.style.display = 'block';
+    errEl.textContent = 'Prea multe încercări. Așteptați 5 minute.';
+    return; 
+  }
   var email = document.getElementById('login-email').value.trim();
   var pass = document.getElementById('login-pass').value;
   var errEl = document.getElementById('login-error');
   errEl.style.display = 'none';
   var res = await sb.auth.signInWithPassword({email: email, password: pass});
-  if (res.error) { errEl.style.display = 'block'; return; }
+  if (res.error) { 
+    loginAttempts++;
+    var remaining = 5 - loginAttempts;
+    if (remaining <= 0) {
+      loginBlocked = true;
+      errEl.style.display = 'block';
+      errEl.textContent = 'Cont blocat temporar. Încercați din nou după 5 minute.';
+      setTimeout(function() { loginAttempts = 0; loginBlocked = false; errEl.style.display = 'none'; }, 5 * 60 * 1000);
+    } else {
+      errEl.style.display = 'block';
+      errEl.textContent = 'Email sau parolă incorectă. Mai aveți ' + remaining + ' încercări.';
+    }
+    return; 
+  }
+  loginAttempts = 0;
   currentUser = res.data.user;
   await loadUserRole();
 }
