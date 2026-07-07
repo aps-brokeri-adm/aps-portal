@@ -1125,6 +1125,19 @@ function showToast(msg) {
 }
 
 document.getElementById('login-pass').addEventListener('keydown', function(e) { if (e.key === 'Enter') doLogin(); });
+
+// ── KEEPALIVE — previne oprirea Supabase Free după 7 zile ──
+async function keepAlive() {
+  try {
+    await sb.from('user_roles').select('id').limit(1);
+    console.log('Keepalive ping OK:', new Date().toLocaleString('ro-RO'));
+  } catch(e) {
+    console.log('Keepalive error:', e);
+  }
+}
+// Ping la fiecare 24 ore
+keepAlive();
+setInterval(keepAlive, 24 * 60 * 60 * 1000);
 </script>
 </body>
 </html>
