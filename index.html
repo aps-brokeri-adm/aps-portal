@@ -338,6 +338,7 @@ async function doLogin() {
   }
   loginAttempts = 0;
   currentUser = res.data.user;
+  localStorage.setItem('aps_login_date', new Date().toISOString().slice(0, 10));
   await loadUserRole();
 }
 
@@ -376,7 +377,11 @@ function showApp() {
   if (currentRole === 'admin') checkBackupReminder();
 }
 
-async function doLogout() { await sb.auth.signOut(); location.reload(); }
+async function doLogout() { 
+  localStorage.removeItem('aps_login_date');
+  await sb.auth.signOut(); 
+  location.reload(); 
+}
 
 function toggleForgot() {
   var s = document.getElementById('forgot-section');
@@ -1504,6 +1509,15 @@ document.getElementById('login-pass').addEventListener('keydown', function(e) { 
 // ── VERIFICARE SESIUNE LA ÎNCĂRCARE ──
 async function checkSession() {
   try {
+    // Verifică dacă sesiunea e din aceeași zi
+    var loginDate = localStorage.getItem('aps_login_date');
+    var today = new Date().toISOString().slice(0, 10);
+    if (loginDate && loginDate !== today) {
+      // Ziua s-a schimbat — deconectare automată
+      localStorage.removeItem('aps_login_date');
+      await sb.auth.signOut();
+      return;
+    }
     var res = await sb.auth.getSession();
     if (res.data && res.data.session && res.data.session.user) {
       currentUser = res.data.session.user;
