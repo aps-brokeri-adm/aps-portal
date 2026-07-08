@@ -1155,15 +1155,30 @@ async function handleImportDept(input, dept) {
         chirie: parseFloat(r['Chirie'] || r['chirie']) || null
       };
       if (dept === 'Retail') {
-        obj.zona_oras = r['ZONA / ORAS'] || r['Zona'] || r['zona_oras'] || '';
-        obj.proprietar = r['Proprietar (companie sau nume pers fizica)'] || r['Proprietar'] || '';
-        obj.persoana_decizie = r['Persoana Decizie si Telefon'] || r['Persoana Decizie'] || '';
-        obj.suprafata_min = parseFloat(r['Suprafata Minim m2'] || r['Suprafata Minim'] || r['suprafata_min']) || null;
-        obj.suprafata_max = parseFloat(r['Suprafata Maxim m2'] || r['Suprafata Maxim'] || r['suprafata_max']) || null;
-        obj.chirie_conditii = r['Chirie si conditii Euro'] || r['Chirie conditii'] || r['chirie_conditii'] || '';
-        obj.actualizare_recenta = r['Actualizare recenta (si alte informatii relevante)'] || r['Actualizare recenta'] || '';
-        obj.link_prezentare = r['LINK PREZENTARE'] || r['Link Prezentare'] || '';
-        obj.filmulet_postat = ['da','yes','1','true'].indexOf(String(r['Filmulet postat (da/nu)'] || r['Filmulet'] || '').toLowerCase()) >= 0;
+        function fk(obj, partials) {
+          var keys = Object.keys(obj);
+          for (var pi = 0; pi < partials.length; pi++) {
+            for (var ki = 0; ki < keys.length; ki++) {
+              if (keys[ki].replace(/\n/g,' ').indexOf(partials[pi]) >= 0) return obj[keys[ki]];
+            }
+          }
+          return '';
+        }
+        obj.zona_oras = fk(r, ['ZONA / ORAS','ZONA/ORAS','Zona']) || '';
+        obj.locatie = fk(r, ['Adresa spatiu','Adresa','Address','Locatie']) || obj.locatie || '';
+        obj.proprietar = fk(r, ['Proprietar']) || '';
+        obj.persoana_decizie = fk(r, ['Persoana Decizie si Telefon','Persoana Decizie']) || '';
+        obj.contact = obj.persoana_decizie || fk(r, ['Contact']) || '';
+        obj.email = fk(r, ['Email']) || '';
+        obj.suprafata_min = parseFloat(fk(r, ['Minim'])) || null;
+        obj.suprafata_max = parseFloat(fk(r, ['Maxim'])) || null;
+        obj.chirie_conditii = fk(r, ['Chirie si conditii','Chirie conditii']) || '';
+        obj.actualizare_recenta = fk(r, ['Actualizare recenta','Actualizare']) || '';
+        obj.link_prezentare = fk(r, ['LINK PREZENTARE','Link Prezentare']) || '';
+        obj.site_retail = ['da','yes','1','true'].indexOf(String(fk(r,['Site']) || '').toLowerCase()) >= 0;
+        obj.imobiliare = ['da','yes','1','true'].indexOf(String(fk(r,['Imobiliare']) || '').toLowerCase()) >= 0;
+        obj.filmulet_postat = ['da','yes','1','true'].indexOf(String(fk(r,['Filmulet']) || '').toLowerCase()) >= 0;
+        obj.verificat = fk(r, ['Data','Ultim Update']) || null;
         obj.broker_elena = !!(r['Elena'] && r['Elena'].toString().trim());
         obj.broker_vlada = !!(r['Vlada'] && r['Vlada'].toString().trim());
       }
