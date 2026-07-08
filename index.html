@@ -186,7 +186,7 @@ tr.row-danger td{background:#fff5f5}
     <div class="sb-item" onclick="nav('retail')" id="nav-retail"><span class="sb-dept-dot" style="background:#F39C12"></span> Retail</div>
     <div class="sb-item" onclick="nav('office')" id="nav-office"><span class="sb-dept-dot" style="background:#378ADD"></span> Office</div>
     <div class="sb-item" onclick="nav('industrial')" id="nav-industrial"><span class="sb-dept-dot" style="background:#888"></span> Industrial</div>
-    <div class="sb-item" onclick="nav('rezidential')" id="nav-rezidential"><span class="sb-dept-dot" style="background:#5DCAA5"></span> Rezidențial</div>
+
   </div>
   <div class="sb-section" id="admin-nav" style="display:none">
     <div class="sb-label">Administrare</div>
@@ -224,7 +224,7 @@ tr.row-danger td{background:#fff5f5}
         <div class="dept-card" onclick="nav('retail')" style="border-top-color:#F39C12"><div class="dept-card-icon" style="background:#fff3cd">🛍️</div><h3>Retail</h3><p>Spații comerciale, showroom-uri, restaurante</p><div class="cnt" style="color:#856404" id="cnt-retail">—</div></div>
         <div class="dept-card" onclick="nav('office')" style="border-top-color:#378ADD"><div class="dept-card-icon" style="background:#cce5ff">🏢</div><h3>Office</h3><p>Birouri, clădiri de birouri, coworking</p><div class="cnt" style="color:#004085" id="cnt-office">—</div></div>
         <div class="dept-card" onclick="nav('industrial')" style="border-top-color:#888"><div class="dept-card-icon" style="background:#e2e8f0">🏭</div><h3>Industrial</h3><p>Depozite, hale, spații logistice</p><div class="cnt" style="color:#4a5568" id="cnt-industrial">—</div></div>
-        <div class="dept-card" onclick="nav('rezidential')" style="border-top-color:#5DCAA5"><div class="dept-card-icon" style="background:#d4edda">🏠</div><h3>Rezidențial</h3><p>Apartamente, case, vile</p><div class="cnt" style="color:#155724" id="cnt-rezidential">—</div></div>
+
       </div>
     </div>
 
@@ -232,7 +232,7 @@ tr.row-danger td{background:#fff5f5}
     <div class="page" id="page-retail"></div>
     <div class="page" id="page-office"></div>
     <div class="page" id="page-industrial"></div>
-    <div class="page" id="page-rezidential"></div>
+
 
     <div class="page" id="page-admin">
       <div style="display:flex;gap:10px;margin-bottom:18px;flex-wrap:wrap">
@@ -300,7 +300,7 @@ var sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 var JUDETE = {"București":["București"],"Cluj":["Cluj-Napoca","Turda","Dej"],"Ilfov":["Voluntari","Buftea","Otopeni","Pantelimon"],"Timiș":["Timișoara","Lugoj"],"Iași":["Iași","Pașcani"],"Constanța":["Constanța","Mangalia"],"Brașov":["Brașov","Codlea","Săcele"],"Prahova":["Ploiești","Câmpina","Sinaia"],"Dolj":["Craiova","Băilești"],"Galați":["Galați","Tecuci"],"Mureș":["Târgu Mureș","Reghin"],"Bihor":["Oradea","Salonta"],"Sibiu":["Sibiu","Mediaș"],"Bacău":["Bacău","Onești"],"Argeș":["Pitești","Câmpulung"],"Dâmbovița":["Târgoviște"],"Vâlcea":["Râmnicu Vâlcea"]};
 var SECTOARE = ["Sector 1","Sector 2","Sector 3","Sector 4","Sector 5","Sector 6"];
 var ZONE_BUC = ["Victoriei","Dorobanți","Floreasca","Unirii","Universitate","Cotroceni","Militari","Pipera","Băneasa","Titan","Drumul Taberei","Aviației","Iancului","Colentina","Tineretului","Rahova"];
-var DEPTS = ["Retail","Office","Industrial","Rezidențial"];
+var DEPTS = ["Retail","Office","Industrial"];
 
 var currentUser = null;
 var currentRole = null;
@@ -464,8 +464,10 @@ function renderDept(dept) {
     '<div class="filter-group"><label>Site Retail</label><select id="f' + key + '-site" onchange="applyFilters(\'' + key + '\',\'' + dept + '\')"><option value="">Toate</option><option value="1">Da</option><option value="0">Nu</option></select></div>' +
     '<div class="filter-group"><label>Imobiliare.ro</label><select id="f' + key + '-imob" onchange="applyFilters(\'' + key + '\',\'' + dept + '\')"><option value="">Toate</option><option value="1">Da</option><option value="0">Nu</option></select></div>' +
     '<button class="btn-filter-reset" onclick="resetFilters(\'' + key + '\',\'' + dept + '\')">✕ Reset</button>' +
-    '<button class="btn-export" onclick="exportDept(\'' + dept + '\')" style="margin-left:auto">📊 Export</button>' +
-    '<button class="btn-cos" onclick="openCosDept(\'' + dept + '\')">🗑️ Coș</button>' +
+    '<button class="btn-import" onclick="openImportDept(\'' + dept + '\')">📥 Import</button>' +
+    '<button class="btn-import" onclick="openImportDept(\'' + dept + '\')" style="font-size:11px;padding:7px 12px">📥 Import</button>' +
+    '<button class="btn-export" onclick="exportDept(\'' + dept + '\')" style="font-size:11px;padding:7px 12px">📊 Export</button>' +
+    '<button class="btn-cos" onclick="openCosDept(\'' + dept + '\')" style="font-size:11px;padding:7px 12px">🗑️ Coș</button>' +
     '</div>' +
     '<div class="tbl-wrap">' +
     '<div class="tbl-head"><div class="tbl-head-title" style="color:' + color + '">' + dept + ' — Proprietăți</div>' +
@@ -971,6 +973,241 @@ function updateSector() {
 }
 
 // ── IMPORT ──
+function openImportDept(dept) {
+  document.getElementById('modal-box').innerHTML =
+    '<div class="modal-title"><div class="modal-accent"></div> 📥 Import ' + dept + ' din Excel/CSV</div>' +
+    '<div class="import-zone" onclick="triggerImportDept()">' +
+    '<div style="font-size:36px;margin-bottom:10px">📥</div>' +
+    '<p>Click pentru a selecta fișierul <strong>' + dept + '</strong><br><strong>Excel (.xlsx) sau CSV (.csv)</strong></p>' +
+    '<div class="import-hint">Fișierul va fi importat automat în departamentul <b>' + dept + '</b>.<br>Coloanele vor fi mapate automat după numele lor.</div>' +
+    '</div>' +
+    '<input type="file" id="file-imp-dept" accept=".csv,.xlsx" style="display:none" onchange="handleImportDept(this,\'' + dept + '\')">' +
+    '<div id="imp-result-dept"></div>' +
+    '<div class="modal-footer-btns"><button class="btn-cancel" onclick="closeModal()">Închide</button></div>';
+  document.getElementById('modal-overlay').classList.add('open');
+}
+
+function triggerImportDept() {
+  var el = document.getElementById('file-imp-dept');
+  if (el) el.click();
+}
+
+async function handleImportDept(input, dept) {
+  var f = input.files[0]; if (!f) return;
+  var res = document.getElementById('imp-result-dept');
+  res.className = 'import-result'; res.textContent = 'Se procesează...'; res.style.display = 'block';
+  try {
+    var rows = [];
+    if (f.name.endsWith('.csv')) {
+      var text = await f.text();
+      var lines = text.split('\n').filter(function(l) { return l.trim(); });
+      var headers = lines[0].split(',').map(function(h) { return h.trim().replace(/"/g, ''); });
+      for (var i = 1; i < lines.length; i++) {
+        var vals = lines[i].split(',').map(function(v) { return v.trim().replace(/"/g, ''); });
+        var row = {}; headers.forEach(function(h, idx) { row[h] = vals[idx] || ''; });
+        rows.push(row);
+      }
+    } else {
+      var buf = await f.arrayBuffer();
+      var wb = XLSX.read(buf);
+      var ws = wb.Sheets[wb.SheetNames[0]];
+      rows = XLSX.utils.sheet_to_json(ws);
+    }
+    var toInsert = rows.map(function(r) {
+      var obj = {
+        dept: dept,
+        locatie: r['Adresa spatiu'] || r['Adresa'] || r['Address'] || r['Locatie'] || r['locatie'] || '',
+        judet: r['Judet'] || r['judet'] || 'București',
+        oras: r['Oras'] || r['oras'] || '',
+        sector: r['Sector'] || r['sector'] || '',
+        zona: r['Zona'] || r['zona'] || '',
+        contact: r['Persoana Decizie si Telefon'] || r['Contact'] || r['contact'] || '',
+        telefon: r['Telefon'] || r['telefon'] || '',
+        email: r['Email'] || r['email'] || '',
+        verificat: r['Site Data Ultim Update'] || r['Data_Verificare'] || r['Data Verificare'] || r['verificat'] || null,
+        site_retail: ['da','yes','1','true'].indexOf(String(r['Site Retail (da/nu)'] || r['Site Retail'] || r['site_retail'] || '').toLowerCase()) >= 0,
+        imobiliare: ['da','yes','1','true'].indexOf(String(r['Imobiliare.ro (da/nu)'] || r['Imobiliare.ro'] || r['Imobiliare'] || r['imobiliare'] || '').toLowerCase()) >= 0,
+        status: r['Status'] || 'Disponibil',
+        suprafata: parseFloat(r['Suprafata'] || r['suprafata'] || r['Suprafata Minim m2'] || r['GLA- sq m -'] || r['GLA']) || null,
+        chirie: parseFloat(r['Chirie'] || r['chirie'] || r['Asking Rent - Euro/sq m/mth. -'] || r['Asking Rent']) || null
+      };
+      // Retail specific
+      if (dept === 'Retail') {
+        obj.zona_oras = r['ZONA / ORAS'] || r['Zona'] || r['zona_oras'] || '';
+        obj.proprietar = r['Proprietar (companie sau nume pers fizica)'] || r['Proprietar'] || '';
+        obj.persoana_decizie = r['Persoana Decizie si Telefon'] || r['Persoana Decizie'] || '';
+        obj.suprafata_min = parseFloat(r['Suprafata Minim m2'] || r['suprafata_min']) || null;
+        obj.suprafata_max = parseFloat(r['Suprafata Maxim m2'] || r['suprafata_max']) || null;
+        obj.chirie_conditii = r['Chirie si conditii Euro'] || r['chirie_conditii'] || '';
+        obj.actualizare_recenta = r['Actualizare recenta (si alte informatii relevante)'] || r['Actualizare recenta'] || '';
+        obj.link_prezentare = r['LINK PREZENTARE'] || r['Link Prezentare'] || '';
+        obj.filmulet_postat = ['da','yes','1','true'].indexOf(String(r['Filmulet postat (da/nu)'] || r['Filmulet'] || '').toLowerCase()) >= 0;
+        obj.broker_elena = !!(r['Elena'] && r['Elena'].toString().trim());
+        obj.broker_vlada = !!(r['Vlada'] && r['Vlada'].toString().trim());
+      }
+      // Office specific
+      if (dept === 'Office') {
+        obj.broker_responsabil = r['Broker Responsabil Generare'] || r['Broker Responsabil'] || '';
+        obj.action_office = r['Action'] || '';
+        obj.acord_gdpr = r['Acord GDPR'] || '';
+        obj.district = r['District'] || '';
+        obj.fee_luni = parseFloat(r['FEE no of months'] || r['FEE luni']) || null;
+        obj.phase = r['Phase'] || '';
+        obj.status1 = r['Status 1'] || '';
+        obj.status2 = r['Status 2'] || '';
+        obj.type_office = r['Type'] || '';
+        obj.grade = r['Grade'] || '';
+        obj.area1 = r['Area 1'] || '';
+        obj.area2 = r['Area 2'] || '';
+        obj.sub_area = r['Sub-Area'] || '';
+        obj.gla_sqm = parseFloat(r['GLA- sq m -'] || r['GLA']) || null;
+        obj.min_let_sqm = parseFloat(r['MIN to let- sq m - '] || r['MIN to let']) || null;
+        obj.max_let_sqm = parseFloat(r['MAX to let- sq m -'] || r['MAX to let']) || null;
+        obj.vacancy = r['Vacancy'] || '';
+        obj.total_vacancy_sqm = parseFloat(r['Total Vacancy- sq m -'] || r['Total Vacancy']) || null;
+        obj.asking_rent = parseFloat(r['Asking Rent - Euro/sq m/mth. -'] || r['Asking Rent']) || null;
+        obj.developer = r['Developer'] || '';
+        obj.owner = r['Owner'] || '';
+        obj.comments = r['Comments'] || '';
+        obj.leasing_comments = r['Leasing Comments'] || '';
+      }
+      return obj;
+    });
+    var impRes = await sb.from('proprietati').insert(toInsert);
+    if (!impRes.error) {
+      res.className = 'import-result success';
+      res.textContent = '✓ ' + toInsert.length + ' proprietăți importate în ' + dept + '!';
+      await loadAllData();
+    } else {
+      res.className = 'import-result error';
+      res.textContent = 'Eroare: ' + impRes.error.message;
+    }
+  } catch(e) {
+    res.className = 'import-result error';
+    res.textContent = 'Eroare: ' + e.message;
+  }
+}
+
+function openImportDept(dept) {
+  document.getElementById('modal-box').innerHTML =
+    '<div class="modal-title"><div class="modal-accent"></div> 📥 Import ' + dept + ' din Excel/CSV</div>' +
+    '<div style="background:#EBF8FF;border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:12px;color:#004085">' +
+    '💡 Fișierul va fi importat automat în departamentul <b>' + dept + '</b> — indiferent de coloana Departament din fișier.' +
+    '</div>' +
+    '<div class="import-zone" onclick="triggerImportDept()">' +
+    '<div style="font-size:36px;margin-bottom:10px">📥</div>' +
+    '<p>Click pentru a selecta fișierul<br><strong>Excel (.xlsx) sau CSV (.csv)</strong></p>' +
+    '</div>' +
+    '<input type="file" id="file-imp-dept" accept=".csv,.xlsx" style="display:none" onchange="handleImportDept(this,\'' + dept + '\')">' +
+    '<div id="imp-result-dept"></div>' +
+    '<div class="modal-footer-btns"><button class="btn-cancel" onclick="closeModal()">Închide</button></div>';
+  document.getElementById('modal-overlay').classList.add('open');
+}
+
+function triggerImportDept() {
+  var el = document.getElementById('file-imp-dept');
+  if (el) el.click();
+}
+
+async function handleImportDept(input, dept) {
+  var f = input.files[0]; if (!f) return;
+  var res = document.getElementById('imp-result-dept');
+  res.className = 'import-result'; res.textContent = 'Se procesează...'; res.style.display = 'block';
+  try {
+    var rows = [];
+    if (f.name.endsWith('.csv')) {
+      var text = await f.text();
+      var lines = text.split('\n').filter(function(l) { return l.trim(); });
+      var headers = lines[0].split(',').map(function(h) { return h.trim().replace(/"/g, ''); });
+      for (var i = 1; i < lines.length; i++) {
+        var vals = lines[i].split(',').map(function(v) { return v.trim().replace(/"/g, ''); });
+        var row = {}; headers.forEach(function(h, idx) { row[h] = vals[idx] || ''; });
+        rows.push(row);
+      }
+    } else {
+      var buf = await f.arrayBuffer();
+      var wb = XLSX.read(buf);
+      var ws = wb.Sheets[wb.SheetNames[0]];
+      rows = XLSX.utils.sheet_to_json(ws);
+    }
+
+    var toInsert = rows.map(function(r) {
+      var obj = {
+        dept: dept,
+        locatie: r['Adresa spatiu'] || r['Adresa'] || r['Address'] || r['Locatie'] || r['locatie'] || '',
+        judet: r['Judet'] || r['judet'] || 'București',
+        oras: r['Oras'] || r['oras'] || '',
+        sector: r['Sector'] || r['sector'] || '',
+        zona: r['Zona'] || r['zona'] || '',
+        contact: r['Persoana Decizie si Telefon'] || r['Contact'] || r['contact'] || '',
+        telefon: r['Telefon'] || r['telefon'] || '',
+        email: r['Email'] || r['email'] || '',
+        verificat: r['Site Data Ultim Update'] || r['Data_Verificare'] || r['Data Verificare'] || r['verificat'] || null,
+        site_retail: ['da','yes','1','true'].indexOf(String(r['Site Retail (da/nu)'] || r['Site Retail'] || r['site_retail'] || '').toLowerCase()) >= 0,
+        imobiliare: ['da','yes','1','true'].indexOf(String(r['Imobiliare.ro (da/nu)'] || r['Imobiliare.ro'] || r['Imobiliare'] || r['imobiliare'] || '').toLowerCase()) >= 0,
+        status: r['Status'] || 'Disponibil',
+        suprafata: parseFloat(r['Suprafata'] || r['suprafata']) || null,
+        chirie: parseFloat(r['Chirie'] || r['chirie']) || null
+      };
+      if (dept === 'Retail') {
+        obj.zona_oras = r['ZONA / ORAS'] || r['Zona'] || r['zona_oras'] || '';
+        obj.proprietar = r['Proprietar (companie sau nume pers fizica)'] || r['Proprietar'] || '';
+        obj.persoana_decizie = r['Persoana Decizie si Telefon'] || r['Persoana Decizie'] || '';
+        obj.suprafata_min = parseFloat(r['Suprafata Minim m2'] || r['Suprafata Minim'] || r['suprafata_min']) || null;
+        obj.suprafata_max = parseFloat(r['Suprafata Maxim m2'] || r['Suprafata Maxim'] || r['suprafata_max']) || null;
+        obj.chirie_conditii = r['Chirie si conditii Euro'] || r['Chirie conditii'] || r['chirie_conditii'] || '';
+        obj.actualizare_recenta = r['Actualizare recenta (si alte informatii relevante)'] || r['Actualizare recenta'] || '';
+        obj.link_prezentare = r['LINK PREZENTARE'] || r['Link Prezentare'] || '';
+        obj.filmulet_postat = ['da','yes','1','true'].indexOf(String(r['Filmulet postat (da/nu)'] || r['Filmulet'] || '').toLowerCase()) >= 0;
+        obj.broker_elena = !!(r['Elena'] && r['Elena'].toString().trim());
+        obj.broker_vlada = !!(r['Vlada'] && r['Vlada'].toString().trim());
+      }
+      if (dept === 'Office') {
+        obj.broker_responsabil = r['Broker Responsabil'] || r['Broker Responsabil Generare'] || '';
+        obj.action_office = r['Action'] || '';
+        obj.acord_gdpr = r['Acord GDPR'] || '';
+        obj.district = r['District'] || '';
+        obj.fee_luni = parseFloat(r['FEE no of months'] || r['FEE luni']) || null;
+        obj.fee_contract_start = r['FEE Contract Start'] || null;
+        obj.fee_contract_end = r['FEE Contract End'] || null;
+        obj.phase = r['Phase'] || '';
+        obj.status1 = r['Status 1'] || '';
+        obj.status2 = r['Status 2'] || '';
+        obj.type_office = r['Type'] || '';
+        obj.grade = r['Grade'] || '';
+        obj.area1 = r['Area 1'] || '';
+        obj.area2 = r['Area 2'] || '';
+        obj.sub_area = r['Sub-Area'] || '';
+        obj.gla_sqm = parseFloat(r['GLA- sq m -'] || r['GLA'] || r['gla_sqm']) || null;
+        obj.min_let_sqm = parseFloat(r['MIN to let- sq m -'] || r['MIN to let'] || r['min_let_sqm']) || null;
+        obj.max_let_sqm = parseFloat(r['MAX to let- sq m -'] || r['MAX to let'] || r['max_let_sqm']) || null;
+        obj.vacancy = r['Vacancy'] || '';
+        obj.total_vacancy_sqm = parseFloat(r['Total Vacancy- sq m -'] || r['Total Vacancy'] || r['total_vacancy_sqm']) || null;
+        obj.asking_rent = parseFloat(r['Asking Rent - Euro/sq m/mth. -'] || r['Asking Rent'] || r['asking_rent']) || null;
+        obj.developer = r['Developer'] || '';
+        obj.owner = r['Owner'] || '';
+        obj.green_certificate = r['Green Certificate'] || '';
+        obj.comments = r['Comments'] || '';
+        obj.leasing_comments = r['Leasing Comments'] || '';
+      }
+      return obj;
+    });
+
+    var impRes = await sb.from('proprietati').insert(toInsert);
+    if (!impRes.error) {
+      res.className = 'import-result success';
+      res.textContent = '✓ ' + toInsert.length + ' proprietăți importate în ' + dept + '!';
+      await loadAllData();
+    } else {
+      res.className = 'import-result error';
+      res.textContent = 'Eroare: ' + impRes.error.message;
+    }
+  } catch(e) {
+    res.className = 'import-result error';
+    res.textContent = 'Eroare: ' + e.message;
+  }
+}
+
 function openImport() {
   document.getElementById('modal-box').innerHTML =
     '<div class="modal-title"><div class="modal-accent"></div> Import Excel / CSV</div>' +
@@ -1133,7 +1370,7 @@ function openDetails(id) {
 
 function closeModal() { document.getElementById('modal-overlay').classList.remove('open'); }
 
-var PAGE_TITLES = {home:'Dashboard',raport:'Rapoarte',retail:'Retail',office:'Office',industrial:'Industrial',rezidential:'Rezidențial',admin:'Admin Portal',cos:'Coș de gunoi',brokeri:'Gestionare Brokeri',istoric:'Istoric modificări'};
+var PAGE_TITLES = {home:'Dashboard',raport:'Rapoarte',retail:'Retail',office:'Office',industrial:'Industrial',admin:'Admin Portal',cos:'Coș de gunoi',brokeri:'Gestionare Brokeri',istoric:'Istoric modificări'};
 
 function nav(p) {
   document.querySelectorAll('.page').forEach(function(el) { el.classList.remove('active'); });
