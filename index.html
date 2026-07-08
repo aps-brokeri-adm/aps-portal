@@ -1503,26 +1503,17 @@ document.getElementById('login-pass').addEventListener('keydown', function(e) { 
 
 // ── VERIFICARE SESIUNE LA ÎNCĂRCARE ──
 async function checkSession() {
-  var res = await sb.auth.getSession();
-  if (res.data && res.data.session && res.data.session.user) {
-    currentUser = res.data.session.user;
-    await loadUserRole();
+  try {
+    var res = await sb.auth.getSession();
+    if (res.data && res.data.session && res.data.session.user) {
+      currentUser = res.data.session.user;
+      await loadUserRole();
+    }
+  } catch(e) {
+    console.log('Session check error:', e);
   }
 }
 checkSession();
-
-// Ascultă schimbări de sesiune
-sb.auth.onAuthStateChange(async function(event, session) {
-  if (event === 'SIGNED_IN' && session) {
-    currentUser = session.user;
-    if (!document.getElementById('app-screen').style.display || 
-        document.getElementById('app-screen').style.display === 'none') {
-      await loadUserRole();
-    }
-  } else if (event === 'SIGNED_OUT') {
-    location.reload();
-  }
-});
 
 // ── KEEPALIVE — previne oprirea Supabase Free după 7 zile ──
 async function keepAlive() {
