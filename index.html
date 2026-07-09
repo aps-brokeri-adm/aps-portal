@@ -359,13 +359,21 @@ async function loadUserRole() {
 
 function setupNav() {
   var isAdmin = currentRole === 'admin';
-  if (isAdmin) document.getElementById('admin-nav').style.display = 'block';
-  if (!isAdmin) {
-    ['retail','office','industrial','rezidential'].forEach(function(d) {
+  if (isAdmin) {
+    document.getElementById('admin-nav').style.display = 'block';
+  } else {
+    // Broker — ascunde celelalte departamente
+    ['retail','office','industrial'].forEach(function(d) {
       var el = document.getElementById('nav-' + d);
       if (el && d !== currentRole) el.style.display = 'none';
     });
-    document.getElementById('nav-raport').style.display = 'none';
+    // Broker vede raport, cos, istoric pentru departamentul lui
+    document.getElementById('nav-raport').style.display = 'block';
+    document.getElementById('nav-cos').style.display = 'block';
+    document.getElementById('nav-istoric').style.display = 'block';
+    // Ascunde brokeri nav pentru non-admin
+    var broNav = document.getElementById('nav-brokeri');
+    if (broNav) broNav.style.display = 'none';
   }
 }
 
@@ -578,17 +586,21 @@ function renderAdmin() {
 function renderRaport() {
   var el = document.getElementById('page-raport');
   if (!el) return;
+  var deptMap = {'retail':'Retail','office':'Office','industrial':'Industrial'};
+  var myDept = currentRole !== 'admin' ? deptMap[currentRole] : null;
+  var filteredData = myDept ? allData.filter(function(r){return r.dept===myDept;}) : allData;
   var byJudet = {};
-  allData.forEach(function(r) {
+  filteredData.forEach(function(r) {
     var j = r.judet || 'Necunoscut';
     if (!byJudet[j]) byJudet[j] = {total:0, disp:0};
     byJudet[j].total++;
     if (r.status === 'Disponibil') byJudet[j].disp++;
   });
-  var html = '<div class="raport-card"><h4>📊 Sumar pe departamente</h4>' +
-    DEPTS.map(function(d) {
-      var t = allData.filter(function(r){return r.dept===d;}).length;
-      var dsp = allData.filter(function(r){return r.dept===d&&r.status==='Disponibil';}).length;
+  var depts = myDept ? [myDept] : DEPTS;
+  var html = '<div class="raport-card"><h4>📊 Sumar ' + (myDept ? myDept : 'pe departamente') + '</h4>' +
+    depts.map(function(d) {
+      var t = filteredData.filter(function(r){return r.dept===d;}).length;
+      var dsp = filteredData.filter(function(r){return r.dept===d&&r.status==='Disponibil';}).length;
       return '<div class="raport-item"><span>' + d + '</span><span><b>' + t + '</b> total / <span style="color:#27ae60">' + dsp + '</span> disponibile</span></div>';
     }).join('') + '</div>' +
     '<div class="raport-card"><h4>📍 Sumar pe județe</h4>' +
@@ -596,7 +608,7 @@ function renderRaport() {
       return '<div class="raport-item"><span>' + e[0] + '</span><span><b>' + e[1].total + '</b> total / <span style="color:#27ae60">' + e[1].disp + '</span> disponibile</span></div>';
     }).join('') + '</div>' +
     '<div class="raport-card"><h4>⚠️ Proprietăți neactualizate (30+ zile)</h4>' +
-    (allData.filter(function(r){return zileUpdate(r.verificat)>30;}).map(function(r) {
+    (filteredData.filter(function(r){return zileUpdate(r.verificat)>30;}).map(function(r) {
       return '<div class="raport-item"><span>' + (r.locatie||'—') + ' (' + r.dept + ')</span><span class="zile-danger">' + zileUpdate(r.verificat) + 'z</span></div>';
     }).join('') || '<div class="raport-item">Toate proprietățile sunt actualizate ✅</div>') + '</div>';
   el.innerHTML = html;
@@ -627,7 +639,13 @@ async function delRowPermanent(id) {
 }
 
 async function loadCos() {
-  var res = await sb.from('proprietati').select('*').not('deleted_at', 'is', null).order('deleted_at', {ascending: false});
+  var query = sb.from('proprietati').select('*').not('deleted_at', 'is', null).order('deleted_at', {ascending: false});
+  if (currentRole !== 'admin') {
+    // Broker vede doar coșul departamentului lui
+    var deptMap = {'retail':'Retail','office':'Office','industrial':'Industrial'};
+    query = query.eq('dept', deptMap[currentRole] || currentRole);
+  }
+  var res = await query;
   var tb = document.getElementById('cos-body');
   if (!tb) return;
   if (!res.data || !res.data.length) { tb.innerHTML = '<tr><td colspan="6" class="empty-state">Coșul de gunoi este gol ✅</td></tr>'; return; }
@@ -679,7 +697,11 @@ async function loadIstoric() {
   var filterData = (document.getElementById('ist-data') || {}).value || '';
 
   var query = sb.from('istoric_modificari').select('*').order('created_at', {ascending: false}).limit(200);
-  if (filterBroker) query = query.eq('user_email', filterBroker);
+  if (currentRole !== 'admin') {
+    // Broker vede doar modificările lui
+    query = query.eq('user_email', currentUser.email);
+  }
+  if (filterBroker && currentRole === 'admin') query = query.eq('user_email', filterBroker);
   if (filterActiune) query = query.eq('actiune', filterActiune);
   if (filterData) {
     var start = filterData + 'T00:00:00.000Z';
@@ -702,18 +724,21 @@ async function loadIstoric() {
 }
 
 async function initIstoric() {
-  // Load brokers for filter dropdown
-  var brokeri = await sb.from('user_roles').select('email').order('email');
-  var brokerOpts = '<option value="">Toți</option>';
-  if (brokeri.data) {
-    brokerOpts += brokeri.data.map(function(b) {
-      return '<option>' + b.email + '</option>';
-    }).join('');
-  }
   var filtersDiv = document.getElementById('ist-filters');
   if (filtersDiv) {
+    var brokerFilter = '';
+    if (currentRole === 'admin') {
+      var brokeri = await sb.from('user_roles').select('email').order('email');
+      var brokerOpts = '<option value="">Toți</option>';
+      if (brokeri.data) {
+        brokerOpts += brokeri.data.map(function(b) { return '<option>' + b.email + '</option>'; }).join('');
+      }
+      brokerFilter = '<div class="filter-group"><label>Broker</label><select id="ist-broker" onchange="loadIstoric()">' + brokerOpts + '</select></div>';
+    } else {
+      brokerFilter = '<div class="filter-group"><label>Broker</label><input disabled value="' + currentUser.email + '" style="padding:6px 10px;border:1px solid var(--border);border-radius:7px;font-size:12px;background:#f8fafc;color:var(--muted)"></div>';
+    }
     filtersDiv.innerHTML =
-      '<div class="filter-group"><label>Broker</label><select id="ist-broker" onchange="loadIstoric()">' + brokerOpts + '</select></div>' +
+      brokerFilter +
       '<div class="filter-group"><label>Acțiune</label><select id="ist-actiune" onchange="loadIstoric()"><option value="">Toate</option><option>ADĂUGAT</option><option>EDITAT</option><option>ȘTERS</option></select></div>' +
       '<div class="filter-group"><label>Data</label><input type="date" id="ist-data" onchange="loadIstoric()" style="padding:6px 10px;border:1px solid var(--border);border-radius:7px;font-size:12px"></div>' +
       '<button class="btn-filter-reset" onclick="resetIstoric()">✕ Reset</button>' +
